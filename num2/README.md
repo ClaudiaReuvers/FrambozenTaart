@@ -56,3 +56,17 @@ For more info see [Wikipedia](https://en.wikipedia.org/wiki/Automatic_repeat_req
 `(From Wikipedia)`
 
 For more info see [Wikipedia](https://en.wikipedia.org/wiki/User_Datagram_Protocol), and page 393 of the book
+
+## Multicast DNS
+(From Wikipedia)
+
+Protocol overview[edit]
+When an mDNS client needs to resolve a host name, it sends an IP multicast query message that asks the host having that
+name to identify itself. That target machine then multicasts a message that includes its IP address. All machines in
+that subnet can then use that information to update their mDNS caches.
+Any host can relinquish its claim to a domain name by sending a response packet with a time to live (TTL) equal to zero.
+By default, mDNS only and exclusively resolves host names ending with the .local top-level domain (TLD). This can cause
+problems if that domain includes hosts which do not implement mDNS but which can be found via a conventional unicast
+DNS server. Resolving such conflicts requires network-configuration changes that violate the zero-configuration goal.
+
+For more info see [Wikipedia](https://en.wikipedia.org/wiki/Multicast_DNS), and page ... of the book
