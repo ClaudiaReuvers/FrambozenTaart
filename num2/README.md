@@ -31,8 +31,8 @@ Write a reflective report of max 5 pages which contains:
   * What went well and is worth remembering?
   * What would you do differently the next time around?
 
-
-## Automatic repeat request (ARQ)
+## Information on existing protocols
+### Automatic repeat request (ARQ)
 `(From Wikipedia)`
 
 also known as Automatic Repeat Query, is an error-control method for data transmission that uses
@@ -52,12 +52,12 @@ These protocols reside in the Data Link or Transport Layers of the OSI model.
 
 For more info see [Wikipedia](https://en.wikipedia.org/wiki/Automatic_repeat_request), and page 103 (stop-and wait) and page 106 (sliding window) of the book
 
-## User Datagram Protocol (UDP)
+### User Datagram Protocol (UDP)
 `(From Wikipedia)`
 
 For more info see [Wikipedia](https://en.wikipedia.org/wiki/User_Datagram_Protocol), and page 393 of the book
 
-## Multicast DNS
+### Multicast DNS
 (From Wikipedia)
 
 Protocol overview[edit]
