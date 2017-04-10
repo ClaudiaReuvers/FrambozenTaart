@@ -55,7 +55,7 @@ For more info see [Wikipedia](https://en.wikipedia.org/wiki/Automatic_repeat_req
 ### User Datagram Protocol (UDP)
 `(From Wikipedia)`
 
-For more info see [Wikipedia](https://en.wikipedia.org/wiki/User_Datagram_Protocol), and page 393 of the book
+For more info see [Wikipedia](https://en.wikipedia.org/wiki/User_Datagram_Protocol), [RFC 768](http://www.rfc-base.org/txt/rfc-768.txt), and page 393 of the book.
 
 ### Multicast DNS
 (From Wikipedia)
@@ -70,3 +70,7 @@ problems if that domain includes hosts which do not implement mDNS but which can
 DNS server. Resolving such conflicts requires network-configuration changes that violate the zero-configuration goal.
 
 For more info see [Wikipedia](https://en.wikipedia.org/wiki/Multicast_DNS), and page ... of the book
+
+### Internet Protocol version 4 (IPv4)
+
+For more infor see [RFC 791](http://www.rfc-base.org/txt/rfc-791.txt), and page 203 of the book
