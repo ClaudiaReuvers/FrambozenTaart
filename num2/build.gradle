@@ -48,7 +48,7 @@ buildscript {
 remotes {
     pi {
         role 'masterNode'
-        host = '192.168.1.1'
+        host = '192.168.40.6'
         user = 'pi'
         password = 'raspberry'
     }
