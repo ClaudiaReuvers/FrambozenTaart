@@ -12,6 +12,7 @@ public class Main {
     private static boolean running = false;
 
     private static InetAddress PiIP;
+    private static final int broadcastPortPi = 9876;
 
     private Main() {}
 
@@ -33,13 +34,8 @@ public class Main {
 //        System.out.println("Stopped");
 //        running = false;
         String reaction = "";
-        while (reaction.equals("")) {
-            String reaction2 = readString("Are you 'Live on Pi'? (yes/no)");
-            if (reaction2.equals("yes")) {
-                reaction = reaction2;
-            } else if (reaction2.equals("no")) {
-                reaction = reaction2;
-            }
+        while (!reaction.equals("yes") && !reaction.equals("no")) {
+            reaction = readString("Are you 'Live on Pi'? (yes/no)");
         }
         //Get IPaddress of the Pi
         //TODO: get this IPaddress by mDNS
@@ -51,19 +47,16 @@ public class Main {
         if (reaction.equals("yes")) {
             System.out.println("Hi pi!");
             try {
-                Pi pi = new Pi(9876);
+                Pi pi = new Pi(broadcastPortPi);
                 pi.start();
             } catch (Exception e) {
                 e.printStackTrace();
             }
         } else {
+            System.out.println("Hi laptop!");
             try {
-                System.out.println("Hi laptop!");
-                Client client = new Client(PiIP, 9876);
+                Client client = new Client(PiIP, broadcastPortPi);
                 client.start();
-                while(true) {
-                    client.receivePacket();
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

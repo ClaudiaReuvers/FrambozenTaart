@@ -13,26 +13,54 @@ class Pi extends Thread {
 
     private DatagramSocket socket;
 
-    public Pi(int port) throws SocketException {
+    Pi(int port) throws SocketException {
         socket = new DatagramSocket(port);
     }
 
     @Override
     public void run() {
-        receivePackets();
+        while(isConnected()) {
+            byte[] receiveData = new byte[1024];
+            DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
+            handleIncommingPacket(receivedPacket);
+        }
+        System.out.println("No longer connected (at receive)");
     }
 
-    private void receivePackets() {
-        byte[] receiveData = new byte[64];
-        DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
-        try {
-            socket.receive(receivedPacket);
-        } catch (IOException e) {
-            e.printStackTrace();//TODO
-        }
-        System.out.println("Received data from: " + receivedPacket.getAddress() + "(IP) at port " + receivedPacket.getPort());
+    private void handleIncommingPacket(DatagramPacket receivedPacket) {
         ExtraHeader header = ExtraHeader.returnHeader(receivedPacket.getData());
-        System.out.println("Header: SYN(" + header.isSyn() + "), ACK(" + header.isAck() + ")");
+        int length = header.getLength();
+        sendResponse(header, receivedPacket.getAddress(), receivedPacket.getPort());
+    }
+
+    private void sendResponse(ExtraHeader header, InetAddress IP, int port) {
+        if (header.isSyn() & !header.isAck()) {
+            ExtraHeader newHeader = new ExtraHeader(true, true, false, false, 0, 0);
+            byte[] sendData = newHeader.getHeader();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IP, port);
+            try {
+                socket.send(sendPacket);
+            } catch (IOException e) {
+                e.printStackTrace();//TODO
+            }
+        }
+    }
+
+//    public void receivePackets() {
+//        byte[] receiveData = new byte[64];
+//        DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
+//        try {
+//            socket.receive(receivedPacket);
+//        } catch (IOException e) {
+//            e.printStackTrace();//TODO
+//        }
+//        System.out.println("Received data from: " + receivedPacket.getAddress() + "(IP) at port " + receivedPacket.getPort());
+//        ExtraHeader header = ExtraHeader.returnHeader(receivedPacket.getData());
+//        System.out.println("Header: SYN(" + header.isSyn() + "), ACK(" + header.isAck() + ")");
+//    }
+
+    public boolean isConnected() {
+        return socket.isConnected();
     }
 
 //    public Pi() throws Exception

@@ -27,10 +27,70 @@ class Client extends Thread {
 
     @Override
     public void run() {
-        while(true) {
-            sendSYN();
+        sendSYN();
+        while(isConnected()) {
+            byte[] receiveData = new byte[1024];
+            DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
+            handleIncommingPacket(receivedPacket);
         }
-//        receivePacket();
+        System.out.println("No longer connected");
+    }
+
+    private void handleIncommingPacket(DatagramPacket packet) {
+        ExtraHeader header = ExtraHeader.returnHeader(packet.getData());
+        int length = header.getLength();
+        byte[] data = generateData(packet.getData(), length);
+        appendDataToFile(data);
+        sendResponse(header, data);
+    }
+
+    private void sendResponse(ExtraHeader header, byte[] data) {
+        if (header.isSyn() & !header.isAck()) {
+            ExtraHeader sendingHeader = new ExtraHeader();
+            byte[] sendingData = new byte[1];
+            sendPacket(sendingHeader, sendingData);
+        }
+    }
+
+    private void sendPacket(ExtraHeader header, byte[] data) {
+        byte[] sendingData = new byte[header.getLength() + data.length];
+        DatagramPacket sendPacket = new DatagramPacket(sendingData, sendingData.length, serverIP, serverPort);
+        try {
+            socket.send(sendPacket);
+        } catch (IOException e) {
+            e.printStackTrace();//TODO
+        }
+    }
+
+    private void appendDataToFile(byte[] data) {
+        //TODO
+    }
+
+    private byte[] generateData(byte[] dataAndHeader, int length) {
+        byte[] data = new byte[dataAndHeader.length - length];
+        for (int i = length; i < dataAndHeader.length; i++) {
+            data[i - length] = dataAndHeader[i];
+        }
+        return data;
+    }
+
+//    public void receivePackets() {
+//        DatagramPacket receivedPacket = new DatagramPacket(new byte[64], 64);
+//        try {
+//            socket.receive(receivedPacket);
+//        } catch (IOException e) {
+//            e.printStackTrace();//TODO
+//        }
+//        byte[] data = receivedPacket.getData();
+//        String txt = "";
+//        for (int i = 0; i < data.length; i++) {
+//            txt += data[i] + ".";
+//        }
+//        System.out.println(txt);
+//    }
+
+    private boolean isConnected() {
+        return socket.isConnected();
     }
 
     private void sendSYN() {
@@ -41,21 +101,6 @@ class Client extends Thread {
         } catch (IOException e) {
 //            e.printStackTrace();//TODO
         }
-    }
-
-    void receivePacket() {
-        DatagramPacket receivedPacket = new DatagramPacket(new byte[64], 64);
-        try {
-            socket.receive(receivedPacket);
-        } catch (IOException e) {
-            e.printStackTrace();//TODO
-        }
-        byte[] data = receivedPacket.getData();
-        String txt = "";
-        for (int i = 0; i < data.length; i++) {
-            txt += data[i] + ".";
-        }
-        System.out.println(txt);
     }
 
 //    {
