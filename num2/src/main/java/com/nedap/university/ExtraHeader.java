@@ -5,7 +5,6 @@ package com.nedap.university;
  */
 public class ExtraHeader {
 
-
     private byte flags;
     private byte[] ackNr = new byte[4];
     private byte[] seqNr = new byte[4];
@@ -24,9 +23,6 @@ public class ExtraHeader {
      */
     public ExtraHeader() {
         this(false, false, false, false, 0, 0);
-//        firstByte = (byte) (makeLength(4) | setFlags(false, false, false, false));
-//        setAckNr(0);
-//        setSeqNr(0);
     }
 
     /**
@@ -42,8 +38,6 @@ public class ExtraHeader {
     public ExtraHeader(boolean syn, boolean ack, boolean fin, boolean pause, int ackNr, int seqNr) {
         setLength(10);
         setFlags(syn, ack, fin, pause);
-//        setLength(length);
-//        setFlags(syn, ack, fin, pause);
         setAckNr(ackNr);
         setSeqNr(seqNr);
         setHeader();
@@ -63,8 +57,6 @@ public class ExtraHeader {
     public void setSyn(boolean syn) {
         if (syn) {
             flags = setBitToOne(flags, 3);
-//            flags = (byte) (flags | (1 << 3));
-//            flags  = (byte) (flags & (byte) 8);
         } else {
             flags = setBitToZero(flags, 3);
         }
@@ -73,8 +65,6 @@ public class ExtraHeader {
     public void setAck(boolean ack) {
         if (ack) {
             flags = setBitToOne(flags, 2);
-//            flags = (byte) (flags | (1 << 2));
-//            flags  = (byte) (flags & (byte) 4);
         } else {
             flags = setBitToZero(flags, 2);
         }
@@ -83,8 +73,6 @@ public class ExtraHeader {
     public void setFin(boolean fin) {
         if (fin) {
             flags = setBitToOne(flags, 1);
-//            flags = (byte) (flags | (1 << 1));
-//            flags  = (byte) (flags & (byte) 2);
         } else {
             flags = setBitToZero(flags, 1);
         }
@@ -93,8 +81,6 @@ public class ExtraHeader {
     public void setPause(boolean pause) {
         if (pause) {
             flags = setBitToOne(flags, 0);
-//            flags = (byte) (flags | (1 << 0));
-//            flags  = (byte) (flags & (byte) 1);
         } else {
             flags = setBitToZero(flags, 0);
         }
@@ -146,13 +132,6 @@ public class ExtraHeader {
             result <<= 8;
             result += 0x00FF & ackNr[i];
         }
-//        long result = 0x00FF & ackNr[0];
-//        result <<= 8;
-//        result += 0x00FF & ackNr[1];
-//        result <<= 8;
-//        result += 0x00FF & ackNr[2];
-//        result <<= 8;
-//        result += 0x00FF & ackNr[3];
         return result;
     }
 
@@ -170,7 +149,6 @@ public class ExtraHeader {
             result += 0x00FF & seqNr[i];
         }
         return result;
-//        return (seqNr[0] << 24) + (seqNr[1] << 16) + (seqNr[2] << 8) + seqNr[3];
     }
 
     private void setHeader() {
@@ -204,23 +182,4 @@ public class ExtraHeader {
     public byte[] getHeader() {
         return header;
     }
-
-//    public static void main(String[] args) {
-//        ExtraHeader header = new ExtraHeader();
-//        System.out.println("Flags field: " + Integer.toBinaryString(header.getFlagsByte()));
-//        System.out.println("Syn (false): " + header.isSyn());
-//        header.setSyn(true);
-//        System.out.println("Flags field: " + Integer.toBinaryString(header.getFlagsByte()));
-//        System.out.println("Syn (true): " + header.isSyn());
-//        System.out.println("Ack (false): " + header.isAck());
-//        header.setSyn(false);
-//        header.setAck(true);
-//        System.out.println("Flags field: " + Integer.toBinaryString(header.getFlagsByte()));
-//        System.out.println("Ack (true): " + header.isAck());
-//        header.setAck(false);
-//        header.setFin(true);
-//        System.out.println("Flags field: " + Integer.toBinaryString(header.getFlagsByte()));
-//        System.out.println("Fin (true): " + header.isFin());
-//    }
-
 }
