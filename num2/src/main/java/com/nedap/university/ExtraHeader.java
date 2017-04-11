@@ -182,4 +182,22 @@ public class ExtraHeader {
     public byte[] getHeader() {
         return header;
     }
+
+    public static ExtraHeader returnHeader(byte[] data) {
+        return new ExtraHeader(data);
+    }
+
+    private ExtraHeader(byte[] bytes) {
+        this.flags = bytes[0];
+        this.ackNr[0] = bytes[1];
+        this.ackNr[1] = bytes[2];
+        this.ackNr[2] = bytes[3];
+        this.ackNr[3] = bytes[4];
+        this.seqNr[0] = bytes[5];
+        this.seqNr[1] = bytes[6];
+        this.seqNr[2] = bytes[7];
+        this.seqNr[3] = bytes[8];
+        this.length = bytes[9];
+
+    }
 }
