@@ -121,4 +121,16 @@ public class testExtraHeader {
         assertEquals(1, header.getSeqNr());
     }
 
+
+    @Test
+    public void testReturnHeader() {
+        ExtraHeader copyHeader = ExtraHeader.returnHeader(inputHeader.getHeader());
+        assertEquals(inputHeader.getLength(), copyHeader.getLength());
+        assertEquals(inputHeader.isSyn(), copyHeader.isSyn());
+        assertEquals(inputHeader.isAck(), copyHeader.isAck());
+        assertEquals(inputHeader.isFin(), copyHeader.isFin());
+        assertEquals(inputHeader.isPause(), copyHeader.isPause());
+        assertEquals(inputHeader.getAckNr(), copyHeader.getAckNr());
+        assertEquals(inputHeader.getSeqNr(), copyHeader.getSeqNr());
+    }
 }

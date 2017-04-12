@@ -153,14 +153,14 @@ public class ExtraHeader {
 
     private void setHeader() {
         header = new byte[1 + 1 + ackNr.length + seqNr.length];
-        header[0] = length;
-        header[1] = flags;
+        header[0] = flags;
         for (int i = 0; i < ackNr.length; i++) {
-            header[i+2] = ackNr[i];
+            header[i+1] = ackNr[i];
         }
         for (int i = 0; i < seqNr.length; i++) {
-            header[i+6] = seqNr[i];
+            header[i+5] = seqNr[i];
         }
+        header[9] = length;
     }
 
     public byte getLengthByte() {
