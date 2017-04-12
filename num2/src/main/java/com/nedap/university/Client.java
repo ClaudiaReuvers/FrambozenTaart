@@ -7,6 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Random;
 
 /**
  * Created by claudia.reuvers on 10/04/2017.
@@ -17,6 +18,7 @@ class Client extends Thread {
     private int serverPort;
     private DatagramSocket socket;
     private BufferedReader in;
+    private long nextAckExpected;
 
     Client(InetAddress connectingIP, int connectingPort) throws IOException {
         this.serverIP = connectingIP;
@@ -51,6 +53,16 @@ class Client extends Thread {
 
     private void sendResponse(ExtraHeader header, byte[] data) {
         ExtraHeader newHeader;
+        if (header.isAck()) {
+            long receivedAckNr = header.getAckNr();
+            if (receivedAckNr != nextAckExpected) {
+                //TODO
+                System.out.println("The received ackNr is " + receivedAckNr + ", but " + nextAckExpected + " was received.");
+                return;
+            }
+        }
+        long receivedAck = header.getAckNr();
+        nextAckExpected =+ 1;
         if (header.isSyn() & !header.isAck() & !header.isFin()) { // SYN (no ACK, no FIN)
             // TODO: create a new Socket for communication s.t. the 'main' socket is open for new clients
             System.out.println("I see a SYN packet");
@@ -124,8 +136,10 @@ class Client extends Thread {
     }
 
     private void sendSYN() {
-        byte[] header = (new ExtraHeader(true, false, false, false, 0, 0)).getHeader();
+        int seqNr = (new Random()).nextInt(2^32);
+        byte[] header = (new ExtraHeader(true, false, false, false, 0, seqNr)).getHeader();
         DatagramPacket sendPacket = new DatagramPacket(header, header.length, this.serverIP, this.serverPort);
+        nextAckExpected = seqNr + 1;
         try {
             socket.send(sendPacket);
         } catch (IOException e) {
