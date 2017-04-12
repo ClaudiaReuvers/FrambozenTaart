@@ -33,10 +33,7 @@ public class Main {
 //
 //        System.out.println("Stopped");
 //        running = false;
-        String reaction = "";
-        while (!reaction.equals("yes") && !reaction.equals("no")) {
-            reaction = readString("Are you 'Live on Pi'? (yes/no)");
-        }
+
         //Get IPaddress of the Pi
         //TODO: get this IPaddress by mDNS
         try {
@@ -44,7 +41,7 @@ public class Main {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        if (reaction.equals("yes")) {
+        if (args[0].equals("pi")) {
             System.out.println("Hi pi!");
             try {
                 Pi pi = new Pi(broadcastPortPi);
@@ -52,7 +49,7 @@ public class Main {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else {
+        } else if (args[0].equals("client")) {
             System.out.println("Hi laptop!");
             try {
                 Client client = new Client(PiIP, broadcastPortPi);
