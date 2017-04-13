@@ -5,20 +5,24 @@
 -- To change this template use File | Settings | File Templates.
 -- trivial protocol example
 -- declare our protocol
+
 trivial_proto = Proto("MyProtocol","Protocol for reliable UDP")
+local f_whole = ProtoField.uint8("myproto.value.hex", "Flags", base.HEX)
+local f_part1 = ProtoField.uint8("myproto.syn", "SYN ACK FIN PAUSE", base.DEC, nil, 0xF)
+local f_part2 = ProtoField.uint8("myproto.syn", "unused", base.DEC, nil, 0xF0)
+
+trivial_proto.fields = {f_value, f_whole, f_part1, f_part2}
 -- create a function to dissect it
 function trivial_proto.dissector(buffer,pinfo,tree)
+
     pinfo.cols.protocol = "NEDAP"
     local subtree = tree:add(trivial_proto,buffer(),"Reliable UDP")
-  --  subtree:add(buffer(0,2),"SourcePort: " .. buffer(0,2):uint())
-   -- subtree = subtree:add(buffer(2,2),"The next two bytes") Nested subtree
-    subtree:add(buffer(0,1),"Flags: " .. buffer(0,1):uint())
-    subtree:add(buffer(1,4),"SeqNo: " .. buffer(1,4):uint())
-    subtree:add(buffer(5,4),"AckNo: " .. buffer(5,4):uint())
-    subtree:add(buffer(9,1),"Length: " .. buffer(9,1):uint())
-    --subtree:add(buffer(9,2),"ackNo: " .. buffer(9,2):uint())
-    --subtree:add(buffer(11,2),"checksum: " .. buffer(11,2):uint())
-
+   subtree:add(buffer(9,1),"Length: " .. buffer(9,1):uint())
+   subtree:add(buffer(1,4),"AckNo: " .. buffer(1,4):uint())
+   subtree:add(buffer(5,4),"SeqNo: " .. buffer(5,4):uint())
+   local subsubtree = subtree:add(f_whole, buffer:range(0,1))
+   subsubtree:add(f_part2, buffer:range(0,1))
+   subsubtree:add(f_part1, buffer:range(0,1))
 
 end
 -- load the udp.port table
