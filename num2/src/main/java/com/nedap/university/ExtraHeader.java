@@ -35,7 +35,7 @@ public class ExtraHeader {
      * @param ackNr sets the acknowledgementnr to ackNr
      * @param seqNr sets the sequencenr to seqNr
      */
-    public ExtraHeader(boolean syn, boolean ack, boolean fin, boolean pause, int ackNr, int seqNr) {
+    public ExtraHeader(boolean syn, boolean ack, boolean fin, boolean pause, long ackNr, long seqNr) {
         setLength(10);
         setFlags(syn, ack, fin, pause);
         setAckNr(ackNr);

@@ -45,46 +45,95 @@ class Client extends Thread {
 
     private void handleIncommingPacket(DatagramPacket packet) {
         ExtraHeader header = ExtraHeader.returnHeader(packet.getData());
+        System.out.print("Rcvd header: ");
+        printHeader(header);
         int length = header.getLength();
         byte[] data = generateData(packet.getData(), length);
         appendDataToFile(data);
         sendResponse(header, data);
     }
 
-    private void sendResponse(ExtraHeader header, byte[] data) {
+    private void sendResponse(ExtraHeader receivedHeader, byte[] data) {
         ExtraHeader newHeader;
-        if (header.isAck()) {
-            long receivedAckNr = header.getAckNr();
+        if (receivedHeader.isAck()) {
+            long receivedAckNr = receivedHeader.getAckNr();
             if (receivedAckNr != nextAckExpected) {
                 //TODO
-                System.out.println("The received ackNr is " + receivedAckNr + ", but " + nextAckExpected + " was received.");
+                System.out.println("The received ackNr is " + receivedAckNr + ", but " + nextAckExpected + " was expected.");
                 return;
             }
         }
-        long receivedAck = header.getAckNr();
-        nextAckExpected =+ 1;
-        if (header.isSyn() & !header.isAck() & !header.isFin()) { // SYN (no ACK, no FIN)
+//        long receivedAck = header.getAckNr();
+//        nextAckExpected =+ 1;
+//        if (header.isSyn() & !header.isAck() & !header.isFin()) { // SYN (no ACK, no FIN)
+//            // TODO: create a new Socket for communication s.t. the 'main' socket is open for new clients
+//            System.out.println("I see a SYN packet");
+//            newHeader = new ExtraHeader(true, true, false, false, 0, 0);
+//        } else if (header.isAck() & !header.isFin() & !header.isSyn()) { //ACK (no SYN, no FIN)
+//            System.out.println("I see an ACK packet");
+//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
+//        } else if (header.isSyn() & header.isAck() & !header.isFin()) { // SYN ACK (no FIN)
+//            System.out.println("I see a SYN ACK packet");
+//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
+//        } else if (header.isFin() & !header.isSyn() & !header.isAck()) { // FIN (no SYN, no ACK)
+//            System.out.println("I see a FIN packet");
+//            newHeader = new ExtraHeader(false, true, true, false, 0, 0);
+//        } else if (header.isFin() & !header.isSyn() & header.isAck()) { // FIN ACK (no SYN)
+//            System.out.println("I see a FIN ACK packet");
+//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
+//        } else {
+//            //TODO: packet not recognized, invalid flag combination; for now: send ACK
+//            System.out.println("Unrecognized packet");
+//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
+//        }
+////        sendPacket(newHeader, new byte[0]);
+//        byte[] sendData = newHeader.getHeader();
+//        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, serverPort); //send SYN-ACK back
+//        try {
+//            socket.send(sendPacket);
+//        } catch (IOException e) {
+//            e.printStackTrace();//TODO
+//        }
+        long receivedAckNr = receivedHeader.getAckNr();
+        long receivedSeqNr = receivedHeader.getSeqNr();
+//        ExtraHeader newHeader;
+        if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) { // SYN (no ACK, no FIN)
             // TODO: create a new Socket for communication s.t. the 'main' socket is open for new clients
             System.out.println("I see a SYN packet");
-            newHeader = new ExtraHeader(true, true, false, false, 0, 0);
-        } else if (header.isAck() & !header.isFin() & !header.isSyn()) { //ACK (no SYN, no FIN)
+            long sendSeqNr = (new Random()).nextInt(2^32);
+            nextAckExpected = sendSeqNr + 1;
+            newHeader = new ExtraHeader(true, true, false, false, 0, sendSeqNr);
+            System.out.print("Send header: ");
+            printHeader(newHeader);
+        } else if (receivedHeader.isAck() & !receivedHeader.isFin() & !receivedHeader.isSyn()) { //ACK (no SYN, no FIN)
             System.out.println("I see an ACK packet");
-            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-        } else if (header.isSyn() & header.isAck() & !header.isFin()) { // SYN ACK (no FIN)
+            long sendSeqNr = receivedHeader.getAckNr();
+            long sendAckNr = receivedHeader.getSeqNr() + 1; //TODO: increase ackNr with datalength if the packet has data
+            nextAckExpected = sendSeqNr + 1;
+            newHeader = new ExtraHeader(false, true, false, false, sendAckNr, sendSeqNr);
+        } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { // SYN ACK (no FIN)
             System.out.println("I see a SYN ACK packet");
-            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-        } else if (header.isFin() & !header.isSyn() & !header.isAck()) { // FIN (no SYN, no ACK)
+            long sendSeqNr = receivedHeader.getAckNr();
+            long sendAckNr = receivedHeader.getSeqNr() + 1;
+            nextAckExpected = sendSeqNr + 1;
+            newHeader = new ExtraHeader(false, true, false, false, sendAckNr, sendSeqNr);
+        } else if (receivedHeader.isFin() & !receivedHeader.isSyn() & !receivedHeader.isAck()) { // FIN (no SYN, no ACK) //TODO: initialise shutdown
+            long sendSeqNr = receivedHeader.getAckNr();
+            long sendAckNr = receivedHeader.getSeqNr() + 1; //TODO: increase ackNr with datalength if the packet has data
+            nextAckExpected = sendSeqNr + 1;
             System.out.println("I see a FIN packet");
-            newHeader = new ExtraHeader(false, true, true, false, 0, 0);
-        } else if (header.isFin() & !header.isSyn() & header.isAck()) { // FIN ACK (no SYN)
+            newHeader = new ExtraHeader(false, true, true, false, sendAckNr, sendAckNr);
+        } else if (receivedHeader.isFin() & !receivedHeader.isSyn() & receivedHeader.isAck()) { // FIN ACK (no SYN) //TODO: shutdown
+            long sendSeqNr = receivedHeader.getAckNr();
+            long sendAckNr = receivedHeader.getSeqNr() + 1; //TODO: increase ackNr with datalength if the packet has data
+            nextAckExpected = sendSeqNr + 1;
             System.out.println("I see a FIN ACK packet");
-            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
+            newHeader = new ExtraHeader(false, true, false, false, sendAckNr, sendSeqNr);
         } else {
             //TODO: packet not recognized, invalid flag combination; for now: send ACK
             System.out.println("Unrecognized packet");
             newHeader = new ExtraHeader(false, true, false, false, 0, 0);
         }
-//        sendPacket(newHeader, new byte[0]);
         byte[] sendData = newHeader.getHeader();
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, serverPort); //send SYN-ACK back
         try {
@@ -138,6 +187,8 @@ class Client extends Thread {
     private void sendSYN() {
         int seqNr = (new Random()).nextInt(2^32);
         byte[] header = (new ExtraHeader(true, false, false, false, 0, seqNr)).getHeader();
+        System.out.print("Send header: ");
+        printHeader(new ExtraHeader(true, false, false, false, 0, seqNr));
         DatagramPacket sendPacket = new DatagramPacket(header, header.length, this.serverIP, this.serverPort);
         nextAckExpected = seqNr + 1;
         try {
@@ -145,6 +196,10 @@ class Client extends Thread {
         } catch (IOException e) {
 //            e.printStackTrace();//TODO
         }
+    }
+
+    private void printHeader(ExtraHeader header) {
+        System.out.println("Length: " + header.getLength() + ". SYN: " + header.isSyn() + "[" + header.getSeqNr() + "]. ACK: " + header.isAck() + "[" + header.getAckNr() + "].");
     }
 
 //    {
