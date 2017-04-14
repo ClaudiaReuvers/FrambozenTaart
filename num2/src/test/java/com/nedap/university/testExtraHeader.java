@@ -23,7 +23,7 @@ public class testExtraHeader {
 
     @Test
     public void testSetUp() {
-        assertEquals(10, header.getLength());
+        assertEquals(0, header.getLength());
         assertFalse(header.isSyn());
         assertFalse(header.isAck());
         assertFalse(header.isFin());
@@ -31,12 +31,12 @@ public class testExtraHeader {
         assertEquals(0, header.getAckNr());
         assertEquals(0, header.getSeqNr());
         assertEquals(10, header.getHeader().length);
-        assertEquals(header.getLength(), header.getHeader().length);
+        assertEquals(header.headerLength(), header.getHeader().length);
     }
 
     @Test
     public void testSetUpHeader2() {
-        assertEquals(10, inputHeader.getLength());
+        assertEquals(0, inputHeader.getLength());
         assertTrue(inputHeader.isSyn());
         assertTrue(inputHeader.isAck());
         assertTrue(inputHeader.isFin());
@@ -44,7 +44,7 @@ public class testExtraHeader {
         assertEquals(2, inputHeader.getAckNr());
         assertEquals(2, inputHeader.getSeqNr());
         assertEquals(10, inputHeader.getHeader().length);
-        assertEquals(inputHeader.getLength(), inputHeader.getHeader().length);
+        assertEquals(inputHeader.headerLength(), inputHeader.getHeader().length);
     }
 
     @Test

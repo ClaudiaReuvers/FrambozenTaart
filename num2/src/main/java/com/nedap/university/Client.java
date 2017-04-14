@@ -1,12 +1,15 @@
 package com.nedap.university;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Random;
 
 /**
@@ -63,37 +66,6 @@ class Client extends Thread {
                 return;
             }
         }
-//        long receivedAck = header.getAckNr();
-//        nextAckExpected =+ 1;
-//        if (header.isSyn() & !header.isAck() & !header.isFin()) { // SYN (no ACK, no FIN)
-//            // TODO: create a new Socket for communication s.t. the 'main' socket is open for new clients
-//            System.out.println("I see a SYN packet");
-//            newHeader = new ExtraHeader(true, true, false, false, 0, 0);
-//        } else if (header.isAck() & !header.isFin() & !header.isSyn()) { //ACK (no SYN, no FIN)
-//            System.out.println("I see an ACK packet");
-//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-//        } else if (header.isSyn() & header.isAck() & !header.isFin()) { // SYN ACK (no FIN)
-//            System.out.println("I see a SYN ACK packet");
-//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-//        } else if (header.isFin() & !header.isSyn() & !header.isAck()) { // FIN (no SYN, no ACK)
-//            System.out.println("I see a FIN packet");
-//            newHeader = new ExtraHeader(false, true, true, false, 0, 0);
-//        } else if (header.isFin() & !header.isSyn() & header.isAck()) { // FIN ACK (no SYN)
-//            System.out.println("I see a FIN ACK packet");
-//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-//        } else {
-//            //TODO: packet not recognized, invalid flag combination; for now: send ACK
-//            System.out.println("Unrecognized packet");
-//            newHeader = new ExtraHeader(false, true, false, false, 0, 0);
-//        }
-////        sendPacket(newHeader, new byte[0]);
-//        byte[] sendData = newHeader.getHeader();
-//        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, serverPort); //send SYN-ACK back
-//        try {
-//            socket.send(sendPacket);
-//        } catch (IOException e) {
-//            e.printStackTrace();//TODO
-//        }
         long receivedAckNr = receivedHeader.getAckNr();
         long receivedSeqNr = receivedHeader.getSeqNr();
 //        ExtraHeader newHeader;
@@ -200,6 +172,29 @@ class Client extends Thread {
 
     private void printHeader(ExtraHeader header) {
         System.out.println("Length: " + header.getLength() + ". SYN: " + header.isSyn() + "[" + header.getSeqNr() + "]. ACK: " + header.isAck() + "[" + header.getAckNr() + "].");
+    }
+
+    private void writeByteArrayToFile(byte[] byteArrayOfFile, String name) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(byteArrayOfFile));
+            File outputfile = new File(name);
+            ImageIO.write(image, "jpg", outputfile);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+    }
+
+    private byte[] writeFileToByteArray(String filename) {
+        byte[] fileInBytes;
+        filename = "Files/" + filename;
+        Path path = Paths.get(filename);
+        try {
+            fileInBytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();//TODO
+            fileInBytes = new byte[0];
+        }
+        return fileInBytes;
     }
 
 //    {

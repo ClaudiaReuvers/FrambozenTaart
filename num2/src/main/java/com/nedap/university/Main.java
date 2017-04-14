@@ -38,13 +38,14 @@ public class Main {
         //TODO: get this IPaddress by mDNS
         try {
             PiIP = InetAddress.getByName("192.168.40.6");
+//            PiIP = InetAddress.getByName("192.168.40.16");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        if (args[0].equals("pi")) {
-            System.out.println("Hi pi!");
+        if (args[0].equals("pi2")) {
+            System.out.println("Hi second pi!");
             try {
-                Pi pi = new Pi(broadcastPortPi);
+                SecondPi pi = new SecondPi(broadcastPortPi);
                 pi.start();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -52,7 +53,15 @@ public class Main {
         } else if (args[0].equals("client")) {
             System.out.println("Hi laptop!");
             try {
-                Client client = new Client(PiIP, broadcastPortPi);
+                SecondClient client = new SecondClient(PiIP, broadcastPortPi);
+                client.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (args[0].equals("pi")) {
+            System.out.println("Hi pi!");
+            try {
+                Pi client = new Pi( broadcastPortPi);
                 client.start();
             } catch (Exception e) {
                 e.printStackTrace();

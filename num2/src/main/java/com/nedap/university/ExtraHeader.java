@@ -36,14 +36,14 @@ public class ExtraHeader {
      * @param seqNr sets the sequencenr to seqNr
      */
     public ExtraHeader(boolean syn, boolean ack, boolean fin, boolean pause, long ackNr, long seqNr) {
-        setLength(10);
+        setLength(0);
         setFlags(syn, ack, fin, pause);
         setAckNr(ackNr);
         setSeqNr(seqNr);
         setHeader();
     }
 
-    private void setLength(int length) {
+    public void setLength(int length) {
         this.length = (byte)length;
     }
 
@@ -52,6 +52,22 @@ public class ExtraHeader {
         setAck(ack);
         setFin(fin);
         setPause(pause);
+    }
+
+    public void setRequest(boolean request) {
+        if (request) {
+            flags = setBitToOne(flags, 5);
+        } else {
+            flags = setBitToZero(flags, 5);
+        }
+    }
+
+    public void setGET(boolean get) {
+        if (get) {
+            flags = setBitToOne(flags, 4);
+        } else {
+            flags = setBitToZero(flags, 4);
+        }
     }
 
     public void setSyn(boolean syn) {
@@ -97,6 +113,22 @@ public class ExtraHeader {
     public int getLength() {
 //        byte length = (byte) (lengthFlags >> 4);
         return (int) length;
+    }
+
+    public boolean isRequest() {
+        return isSet(flags, 5);
+    }
+
+    public boolean isGET() {
+        return isSet(flags, 4) && isSet(flags, 5);
+    }
+
+    public boolean isSEND() {
+        return isSet(flags, 4) && !isSet(flags, 5);
+    }
+
+    public boolean isShowList() {
+        return !isSet(flags, 4) && isSet(flags, 5);
     }
 
     public boolean isSyn() {
@@ -180,7 +212,8 @@ public class ExtraHeader {
     }
 
     public byte[] getHeader() {
-        return header;
+        setHeader();
+        return this.header;
     }
 
     public static ExtraHeader returnHeader(byte[] data) {
@@ -189,15 +222,25 @@ public class ExtraHeader {
 
     private ExtraHeader(byte[] bytes) {
         this.flags = bytes[0];
-        this.ackNr[0] = bytes[1];
-        this.ackNr[1] = bytes[2];
-        this.ackNr[2] = bytes[3];
-        this.ackNr[3] = bytes[4];
-        this.seqNr[0] = bytes[5];
-        this.seqNr[1] = bytes[6];
-        this.seqNr[2] = bytes[7];
-        this.seqNr[3] = bytes[8];
+        for (int i = 0; i < ackNr.length; i++) {
+            this.ackNr[i] = bytes[i + 1];
+        }
+        for (int i = 0; i < ackNr.length; i++) {
+            this.seqNr[i] = bytes[i + 5];
+        }
+//        this.ackNr[0] = bytes[1];
+//        this.ackNr[1] = bytes[2];
+//        this.ackNr[2] = bytes[3];
+//        this.ackNr[3] = bytes[4];
+//        this.seqNr[0] = bytes[5];
+//        this.seqNr[1] = bytes[6];
+//        this.seqNr[2] = bytes[7];
+//        this.seqNr[3] = bytes[8];
         this.length = bytes[9];
+        setHeader();
+    }
 
+    public int headerLength() {
+        return header.length;
     }
 }

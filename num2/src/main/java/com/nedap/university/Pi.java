@@ -1,10 +1,17 @@
 package com.nedap.university;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Random;
 
 /**
@@ -14,6 +21,7 @@ class Pi extends Thread {
 
     private DatagramSocket socket;
     private long nextAckExpected;
+    private boolean connectionSetUp = false;
 
     Pi(int port) throws SocketException {
         socket = new DatagramSocket(port);
@@ -40,14 +48,23 @@ class Pi extends Thread {
         ExtraHeader header = ExtraHeader.returnHeader(receivedPacket.getData());
         System.out.print("Rcvd header: ");
         printHeader(header);
-        sendResponse(header, receivedPacket.getAddress(), receivedPacket.getPort());
+        sendResponse(header, receivedPacket.getAddress(), receivedPacket.getPort(), receivedPacket.getData());
     }
 
     private void printHeader(ExtraHeader header) {
         System.out.println("Length: " + header.getLength() + ". SYN: " + header.isSyn() + "[" + header.getSeqNr() + "]. ACK: " + header.isAck() + "[" + header.getAckNr() + "].");
     }
 
-    private void sendResponse(ExtraHeader receivedHeader, InetAddress IP, int port) {
+    private byte[] sendACK(long seqNr, long ackNr) {
+        byte[] header = (new ExtraHeader(false, true, false, false, ackNr, seqNr)).getHeader();
+        nextAckExpected = seqNr + 1;
+        return header;
+    }
+
+
+
+    private void sendResponse(ExtraHeader receivedHeader, InetAddress IP, int port, byte[] wholePacket) {
+
         if (receivedHeader.isAck()) {
             long receivedAckNr = receivedHeader.getAckNr();
             if (receivedAckNr != nextAckExpected) {
@@ -68,10 +85,17 @@ class Pi extends Thread {
             newHeader = new ExtraHeader(true, true, false, false, sendAckNr, sendSeqNr);
             System.out.print("Send header: ");
             printHeader(newHeader);
+            connectionSetUp = true;
         } else if (receivedHeader.isAck() & !receivedHeader.isFin() & !receivedHeader.isSyn()) { //ACK (no SYN, no FIN)
             System.out.println("I see an ACK packet");
+            long sendAckNr;
+//            if (connectionSetUp & (wholePacket.length > 10)) {
+//                sendAckNr = receivedHeader.getSeqNr() + wholePacket.length - receivedHeader.getLength();
+//            } else {
+                sendAckNr = receivedSeqNr + 1;
+//            }
             long sendSeqNr = receivedHeader.getAckNr();
-            long sendAckNr = receivedHeader.getSeqNr() + 1; //TODO: increase ackNr with datalength if the packet has data
+//            long sendAckNr = receivedHeader.getSeqNr() + 1; //TODO: increase ackNr with datalength if the packet has data
             nextAckExpected = sendSeqNr + 1;
             newHeader = new ExtraHeader(false, true, false, false, sendAckNr, sendSeqNr);
         } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { // SYN ACK (no FIN)
@@ -104,6 +128,29 @@ class Pi extends Thread {
         } catch (IOException e) {
             e.printStackTrace();//TODO
         }
+    }
+
+    private void writeByteArrayToFile(byte[] byteArrayOfFile, String name) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(byteArrayOfFile));
+            File outputfile = new File(name);
+            ImageIO.write(image, "jpg", outputfile);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+    }
+
+    private byte[] writeFileToByteArray(String filename) {
+        byte[] fileInBytes;
+        filename = "Files/" + filename;
+        Path path = Paths.get(filename);
+        try {
+            fileInBytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();//TODO
+            fileInBytes = new byte[0];
+        }
+        return fileInBytes;
     }
 
 //    public void receivePackets() {
