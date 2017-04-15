@@ -11,11 +11,13 @@ import java.util.Random;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
+ *
+ * @author claudia.reuvers
  */
 public class Client extends Thread {
 
-    private InetAddress destinationIP;
-    private int destinationPort;
+//    private InetAddress destinationIP;
+//    private int destinationPort;
     private Sender sender;
     private Receiver receiver;
     private BufferedReader in;
@@ -23,9 +25,16 @@ public class Client extends Thread {
     private volatile boolean packetArrived; //s.t. a change in this parameter results in a reading of the packet
     private long nextAckExpected;
 
+    /**
+     * Creates a <code>Client</code> with a <code>Sender</code> and <code>Receiver</code>.
+     * Creates a new <code>DatagramSocket</code> from which the <code>Sender</code> and <code>Receiver</code> send and receive their data.
+     * @param connectingIP <code>InetAddress</code> to which the data must be send
+     * @param connectingPort port to which the data must be send
+     * @throws SocketException if it is not possible to open a new <code>Socket</code> for communication
+     */
     Client(InetAddress connectingIP, int connectingPort) throws SocketException {
-        this.destinationIP = connectingIP;
-        this.destinationPort = connectingPort;
+//        this.destinationIP = connectingIP;
+//        this.destinationPort = connectingPort;
         DatagramSocket sock = new DatagramSocket();
         this.sender = new Sender(sock);
         sender.setDestPort(connectingPort);
@@ -35,10 +44,13 @@ public class Client extends Thread {
         this.in = new BufferedReader(new InputStreamReader(System.in));
     }
 
-    public void init() {
-        receiver.start();
-    }
+//    public void init() {
+//        receiver.start();
+//    }
 
+    /**
+     * Starts the <code>Client</code>, as long as the client is connected it gets a packet from the queue of the <code>Receiver</code> and sends response.
+     */
     @Override
     public void run() {
 //        sendDNSRequest();
@@ -49,6 +61,10 @@ public class Client extends Thread {
         }
     }
 
+    /**
+     * Determines the appropriate response on the packet.
+     * @param packetInQueue the <code>DatagramPacket</code> to which a response is determined
+     */
     private void determineResponse(DatagramPacket packetInQueue) {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
         //TODO
@@ -75,6 +91,9 @@ public class Client extends Thread {
 //        }
 //    }
 
+    /**
+     * Sends a SYN packet.
+     */
     private void sendSYN() { //TODO: look if still valid
         int seqNr = (new Random()).nextInt(2^32);
         ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
@@ -89,7 +108,10 @@ public class Client extends Thread {
         }
     }
 
-    public void sendDNSRequest() {
+    /**
+     * Sends a DNSRequest.
+     */
+    void sendDNSRequest() {
         ExtraHeader header = new ExtraHeader();
         header.setDNSRequest();
         header.setNoRequest();
@@ -103,11 +125,19 @@ public class Client extends Thread {
         }
     }
 
-    public void packetArrived(boolean arrived) {
+    /**
+     * Sets the packetArrived-boolean on the specified value.
+     * @param arrived if <code>true</code> the client is notified and a response is generated, else nothing happens
+     */
+    void packetArrived(boolean arrived) {
         this.packetArrived = arrived;
     }
 
-    public Sender getSender() {
+    /**
+     * Returns the <code>Sender</code> of this <code>Client</code>.
+     * @return <code>Sender</code> of the <code>Client</code>
+     */
+    Sender getSender() {
         return this.sender;
     }
 }

@@ -7,16 +7,29 @@ import java.net.SocketException;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
+ *
+ * @author claudia.reuvers
  */
-public class Pi {
+public class Pi extends Thread{
 
     private DatagramSocket broadcastSocket;
 
+    /**
+     * Creates a new <code>Pi</code> with a specified broadcast-port.
+     * @param port port to which the <code>Pi</code> listens for connections
+     * @throws SocketException if it is not possible to open a socket on the port
+     */
     Pi(int port) throws SocketException {
         broadcastSocket = new DatagramSocket(port);
     }
 
-    public void init() {
+    /**
+     * Listens for DNSRequests.
+     * If a DNSRequest comes in, a new <code>Client</code> is created with a <code>Sender</code> and
+     * <code>Receiver</code> on a new <code>Socket</code>.
+     */
+    @Override
+    public void run() {
         while (true) {//TODO: stop running
             byte buffer[] = new byte[1024];
             DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
@@ -40,6 +53,11 @@ public class Pi {
         }
     }
 
+    /**
+     * Creates a new <code>Client</code> with <code>Sender</code> and <code>Receiver</code> for this DNSRequest
+     * @param receivedPacket packet received on the broadcast-port
+     * @throws SocketException if it is not possible to create a socket for the <code>Client</code>
+     */
     private void respondToDNSRequest(DatagramPacket receivedPacket) throws SocketException {
         ExtraHeader header = new ExtraHeader();
         header.setDNSResponse();

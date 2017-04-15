@@ -1,15 +1,15 @@
 package com.nedap.university;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
+ *
+ * @author claudia.reuvers
  */
 public class Receiver extends Thread {
 
@@ -20,15 +20,24 @@ public class Receiver extends Thread {
     private boolean isConnected = true;
     private Queue<DatagramPacket> queue;
 
+    /**
+     * Creates a <code>Receiver</code> connected to a specified <code>DatagramSocket</code> and <code>Client</code>.
+     * @param receivingSocket socket from which packets are received
+     * @param client client to which this receiver belongs
+     */
     Receiver(DatagramSocket receivingSocket, Client client) {
         this.receivingSocket = receivingSocket;
         this.client = client;
         this.queue = new ConcurrentLinkedQueue<>();
     }
 
+    /**
+     * Receive packets and add them to the queue.
+     * If a packet arrives and the queue is larger than 0 items, the client is notified.
+     */
     @Override
     public void run() {
-        while (isConnected) {
+        while (isConnected) { //TODO: set this boolean to false when no longer connected
             DatagramPacket receivedPacket = receivePackets();
             queue.add(receivedPacket);
             setClientPacketArrived();
@@ -36,6 +45,9 @@ public class Receiver extends Thread {
         System.out.println("No longer connected.");
     }
 
+    /**
+     * Notify the client if there are packets in the queue.
+     */
     private void setClientPacketArrived() {
         if (queue.size() > 0) {
             client.packetArrived(true);
@@ -59,7 +71,11 @@ public class Receiver extends Thread {
 //        return this.destAddress;
 //    }
 
-    public DatagramPacket receivePackets(){
+    /**
+     * Receive a packet from the socket.
+     * @return <code>DatagramPacket</code> retrieved from the socket
+     */
+    private DatagramPacket receivePackets(){
         byte[] buf = new byte[1024];
         DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
         try {
@@ -70,7 +86,11 @@ public class Receiver extends Thread {
         return receivedPacket;
     }
 
-    public DatagramPacket getPacketInQueue() {
+    /**
+     * Returns the first packet in the queue
+     * @return first <code>DatagramPacket</code> in the queue
+     */
+    DatagramPacket getPacketInQueue() {
         DatagramPacket packet = queue.remove();
         setClientPacketArrived();
         return packet;
