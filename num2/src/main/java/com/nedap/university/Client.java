@@ -12,49 +12,103 @@ import java.util.Random;
 /**
  * Created by claudia.reuvers on 14/04/2017.
  */
-public class Client {
+public class Client extends Thread {
 
-    private InetAddress serverIP;
-    private int serverPort;
-    private DatagramSocket socket;
+    private InetAddress destinationIP;
+    private int destinationPort;
+    private Sender sender;
+    private Receiver receiver;
     private BufferedReader in;
+    private boolean isConnected = true;
+    private volatile boolean packetArrived; //s.t. a change in this parameter results in a reading of the packet
     private long nextAckExpected;
 
     Client(InetAddress connectingIP, int connectingPort) throws SocketException {
-        this.serverIP = connectingIP;
-        this.serverPort = connectingPort;
-        this.socket = new DatagramSocket();
+        this.destinationIP = connectingIP;
+        this.destinationPort = connectingPort;
+        DatagramSocket sock = new DatagramSocket();
+        this.sender = new Sender(sock);
+        sender.setDestPort(connectingPort);
+        sender.setDestAddress(connectingIP);
+        this.receiver = new Receiver(sock, this);
+        receiver.start();
         this.in = new BufferedReader(new InputStreamReader(System.in));
     }
 
     public void init() {
-        sendSYN();
-        while (true) {//TODO: stop running
-            byte buffer[] = new byte[1024];
-            DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
-            try {
-                socket.receive(receivedPacket);
-            } catch (IOException e) {
-                e.printStackTrace();//TODO: handle exception at socket.receive
-            }
-            if (receivedPacket.getData().length > 9) {
-                //Do something: e.g. handleIncommingPacket(receivedPacket)
+        receiver.start();
+    }
+
+    @Override
+    public void run() {
+//        sendDNSRequest();
+        while(isConnected) {
+            if (packetArrived) {
+                determineResponse(receiver.getPacketInQueue());
             }
         }
     }
 
+    private void determineResponse(DatagramPacket packetInQueue) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
+        //TODO
+    }
+
+
+//    public void init() {
+//        while(!isConnected) {
+//            sendDNSRequest();
+//        }
+
+//        sendSYN();
+//        while (true) {//TODO: stop running
+//            byte buffer[] = new byte[1024];
+//            DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
+//            try {
+//                socket.receive(receivedPacket);
+//            } catch (IOException e) {
+//                e.printStackTrace();//TODO: handle exception at socket.receive
+//            }
+//            if (receivedPacket.getData().length > 9) {
+//                //Do something: e.g. handleIncommingPacket(receivedPacket)
+//            }
+//        }
+//    }
+
     private void sendSYN() { //TODO: look if still valid
         int seqNr = (new Random()).nextInt(2^32);
-        byte[] header = (new ExtraHeader(true, false, false, false, 0, seqNr)).getHeader();
-        System.out.print("Send header: ");
-        System.out.println((new ExtraHeader(true, false, false, false, 0, seqNr)));
-        DatagramPacket sendPacket = new DatagramPacket(header, header.length, this.serverIP, this.serverPort);
+        ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
+        System.out.print("Send header: " + header);
+//        System.out.println((new ExtraHeader(true, false, false, false, 0, seqNr)));
+//        DatagramPacket sendPacket = new DatagramPacket(header, header.length, this.broadcastIP, this.broadcastPort);
         nextAckExpected = seqNr + 1;
         try {
-            socket.send(sendPacket);
+            sender.send(header, new byte[0]);
         } catch (IOException e) {
 //            e.printStackTrace();//TODO
         }
+    }
+
+    public void sendDNSRequest() {
+        ExtraHeader header = new ExtraHeader();
+        header.setDNSRequest();
+        header.setNoRequest();
+        System.out.println("Send request: " + header);
+//        byte[] headerBytes = header.getHeader();
+//        DatagramPacket packet = new DatagramPacket(headerBytes, headerBytes.length, destinationIP, destinationPort);
+        try {
+            sender.send(header, new byte[0]);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void packetArrived(boolean arrived) {
+        this.packetArrived = arrived;
+    }
+
+    public Sender getSender() {
+        return this.sender;
     }
 }
 

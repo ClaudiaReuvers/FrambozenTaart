@@ -25,10 +25,44 @@ public class Pi {
             } catch (IOException e) {
                 e.printStackTrace();//TODO: handle exception at socket.receive()
             }
-            if (receivedPacket.getLength() > 9) {
-                //Do something e.g. handleIncommingPacket(receivedPacket);
+            ExtraHeader receivedPacketHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+            System.out.println(receivedPacketHeader);
+            if (receivedPacketHeader.isDNSRequest()) {
+                try {
+                    respondToDNSRequest(receivedPacket);
+                } catch (SocketException e) {
+                    System.out.println("Unable to create a socket for " + receivedPacket.getAddress() + " on port " + receivedPacket.getPort() + ".");
+//                    System.out.println("Unable to send DNS Response to " + receivedPacket.getAddress() + " on port " + receivedPacket.getPort());
+                }
+            } else {
+                System.out.println("Received packet is not recognized.");
             }
         }
+    }
+
+    private void respondToDNSRequest(DatagramPacket receivedPacket) throws SocketException {
+        ExtraHeader header = new ExtraHeader();
+        header.setDNSResponse();
+
+        Client client = new Client(receivedPacket.getAddress(), receivedPacket.getPort());
+        try {
+            client.start();
+            client.getSender().send(header, new byte[0]);
+
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+
+//        DatagramSocket sock = new DatagramSocket();
+//        Sender sender = new Sender(sock);
+//        sender.setDestPort(receivedPacket.getPort());
+//        sender.setDestAddress(receivedPacket.getAddress());
+//        Receiver receiver = new Receiver(sock, sender); //TODO: start sender & receiver
+//        try {
+//            sender.send(header, new byte[0]);
+//        } catch (IOException e) {
+//            e.printStackTrace();//TODO
+//        }
     }
 }
 

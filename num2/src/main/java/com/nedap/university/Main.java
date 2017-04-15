@@ -12,6 +12,7 @@ public class Main {
     private static boolean running = false;
 
     private static InetAddress PiIP;
+    private static InetAddress broadcastIP;
     private static final int broadcastPortPi = 9876;
 
     private Main() {}
@@ -37,6 +38,7 @@ public class Main {
         //Get IPaddress of the Pi
         //TODO: get this IPaddress by mDNS
         try {
+            broadcastIP = InetAddress.getByName("192.168.40.255");
             PiIP = InetAddress.getByName("192.168.40.6");
 //            PiIP = InetAddress.getByName("192.168.40.16");
         } catch (UnknownHostException e) {
@@ -51,10 +53,11 @@ public class Main {
                 e.printStackTrace();
             }
         } else if (args[0].equals("client")) {
-            System.out.println("Hi laptop!");
+            System.out.println("Hi client!");
             try {
-                Client client = new Client(PiIP, broadcastPortPi);
-                client.init();
+                Client client = new Client(broadcastIP, broadcastPortPi);
+                client.sendDNSRequest();
+                client.start();
             } catch (Exception e) {
                 e.printStackTrace();
             }
