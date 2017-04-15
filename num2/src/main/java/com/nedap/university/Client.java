@@ -27,7 +27,8 @@ public class Client extends Thread {
 
     /**
      * Creates a <code>Client</code> with a <code>Sender</code> and <code>Receiver</code>.
-     * Creates a new <code>DatagramSocket</code> from which the <code>Sender</code> and <code>Receiver</code> send and receive their data.
+     * Creates a new <code>DatagramSocket</code> from which the <code>Sender</code> and <code>Receiver</code> send and
+     * receive their data.
      * @param connectingIP <code>InetAddress</code> to which the data must be send
      * @param connectingPort port to which the data must be send
      * @throws SocketException if it is not possible to open a new <code>Socket</code> for communication
@@ -50,7 +51,8 @@ public class Client extends Thread {
 //    }
 
     /**
-     * Starts the <code>Client</code>, as long as the client is connected it gets a packet from the queue of the <code>Receiver</code> and sends response.
+     * Starts the <code>Client</code>, as long as the client is connected it gets a packet from the queue of the
+     * <code>Receiver</code> and sends response.
      */
     @Override
     public void run() {
@@ -89,11 +91,12 @@ public class Client extends Thread {
 
     private void respondToSYN(DatagramPacket packetInQueue) {
         System.out.println("SYN");
-        //TODO: response to SYN
+        sendSYNACK(packetInQueue);
     }
 
     private void respondToSYNACK(DatagramPacket packetInQueue) {
         System.out.println("SYN ACK");
+        sendACK(packetInQueue);
         //TODO: response to SYN ACK
     }
 
@@ -134,6 +137,7 @@ public class Client extends Thread {
 
     /**
      * Sends a SYN packet.
+     * The sequence number of this packet is set to a random number between 0 and 2^32 - 1.
      */
     private void sendSYN() { //TODO: look if still valid
         int seqNr = (new Random()).nextInt(2^32);
@@ -143,7 +147,45 @@ public class Client extends Thread {
         try {
             sender.send(header, new byte[0]);
         } catch (IOException e) {
-//            e.printStackTrace();//TODO
+            e.printStackTrace();//TODO
+        }
+    }
+
+    /**
+     * Sends a SYN ACK packet.
+     * The sequence number of this packet is set to a random number between 0 and 2^32 - 1. The acknr is updated with the
+     * received seqNr + the length of the data + 1. And the nextExpectedAckNr is also updated.
+     * @param receivedPacket the packet to which the SYN ACK must respond
+     */
+    private void sendSYNACK(DatagramPacket receivedPacket) {
+        int seqNr = (new Random()).nextInt(2^32);
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader header = new ExtraHeader(true, true, false, false, ackNr, seqNr);
+        try {
+            getSender().send(header, new byte[0]);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+    }
+
+    /**
+     * Sends an ACK packet.
+     * The sequence number of the packet is set to the ackNr of the received packet. The ackNr and nextExpectedAckNr
+     * are updated.
+     * @param receivedPacket the packet to which the ACK packet must respond
+     */
+    private void sendACK(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
+        try {
+            getSender().send(sendingHeader, new byte[0]);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
         }
     }
 
@@ -159,7 +201,7 @@ public class Client extends Thread {
         try {
             sender.send(header, new byte[0]);
         } catch (IOException e) {
-            e.printStackTrace();
+            e.printStackTrace();//TODO
         }
     }
 
