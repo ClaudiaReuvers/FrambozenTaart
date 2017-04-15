@@ -48,7 +48,7 @@ public class Main {
             System.out.println("Hi pi!");
             try {
                 Pi pi = new Pi(broadcastPortPi);
-                pi.init();
+                pi.start();
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -80,6 +80,7 @@ public class Receiver extends Thread {
         DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
         try {
             receivingSocket.receive(receivedPacket);
+            System.out.println("Received: " + ExtraHeader.returnHeader(receivedPacket.getData()));
         } catch (IOException e) {
             e.printStackTrace();//TODO
         }

@@ -35,9 +35,9 @@ class Sender {
      */
     void send(ExtraHeader header, byte[] data) throws IOException {
         header.setLength(data.length);
-        System.out.println(header);
         byte[] sendData = header.getHeader();//TODO
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
+        System.out.println("Send: " + header);
         socket.send(packet);
     }
 

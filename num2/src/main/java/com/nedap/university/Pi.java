@@ -39,7 +39,7 @@ public class Pi extends Thread{
                 e.printStackTrace();//TODO: handle exception at socket.receive()
             }
             ExtraHeader receivedPacketHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-            System.out.println(receivedPacketHeader);
+            System.out.println("Broadcast received: " + receivedPacketHeader);
             if (receivedPacketHeader.isDNSRequest()) {
                 try {
                     respondToDNSRequest(receivedPacket);

@@ -36,6 +36,7 @@ public class Client extends Thread {
 //        this.destinationIP = connectingIP;
 //        this.destinationPort = connectingPort;
         DatagramSocket sock = new DatagramSocket();
+        System.out.println("Created new socket on port " + sock.getLocalPort() + "(" + sock.getLocalAddress() + ")");
         this.sender = new Sender(sock);
         sender.setDestPort(connectingPort);
         sender.setDestAddress(connectingIP);
@@ -67,9 +68,49 @@ public class Client extends Thread {
      */
     private void determineResponse(DatagramPacket packetInQueue) {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
-        //TODO
+        if (receivedHeader.isDNSResponse()) {
+            sender.setDestAddress(packetInQueue.getAddress());
+            sender.setDestPort(packetInQueue.getPort());
+            sendSYN();
+        } else if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) {        //SYN
+            respondToSYN(packetInQueue);
+        } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {  //SYN ACK
+            respondToSYNACK(packetInQueue);
+        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { //    ACK
+            respondToACK(packetInQueue);
+        } else if (!receivedHeader.isSyn() & !receivedHeader.isAck() & receivedHeader.isFin()) { //FIN
+            respondToFIN(packetInQueue);
+        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & receivedHeader.isFin()) {  //FIN ACK
+            respondToFINACK(packetInQueue);
+        } else {
+            System.out.println("Unknown flags"); //TODO
+        }
     }
 
+    private void respondToSYN(DatagramPacket packetInQueue) {
+        System.out.println("SYN");
+        //TODO: response to SYN
+    }
+
+    private void respondToSYNACK(DatagramPacket packetInQueue) {
+        System.out.println("SYN ACK");
+        //TODO: response to SYN ACK
+    }
+
+    private void respondToACK(DatagramPacket packetInQueue) {
+        System.out.println("ACK");
+        //TODO: response to ACK
+    }
+
+    private void respondToFIN(DatagramPacket packetInQueue) {
+        System.out.println("FIN");
+        //TODO: response to FIN
+    }
+
+    private void respondToFINACK(DatagramPacket packetInQueue) {
+        System.out.println("FIN ACK");
+        //TODO: response to FIN ACK
+    }
 
 //    public void init() {
 //        while(!isConnected) {
@@ -98,8 +139,6 @@ public class Client extends Thread {
         int seqNr = (new Random()).nextInt(2^32);
         ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
         System.out.print("Send header: " + header);
-//        System.out.println((new ExtraHeader(true, false, false, false, 0, seqNr)));
-//        DatagramPacket sendPacket = new DatagramPacket(header, header.length, this.broadcastIP, this.broadcastPort);
         nextAckExpected = seqNr + 1;
         try {
             sender.send(header, new byte[0]);
@@ -115,7 +154,6 @@ public class Client extends Thread {
         ExtraHeader header = new ExtraHeader();
         header.setDNSRequest();
         header.setNoRequest();
-        System.out.println("Send request: " + header);
 //        byte[] headerBytes = header.getHeader();
 //        DatagramPacket packet = new DatagramPacket(headerBytes, headerBytes.length, destinationIP, destinationPort);
         try {
