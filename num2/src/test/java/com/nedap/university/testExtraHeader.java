@@ -134,5 +134,17 @@ public class testExtraHeader {
         assertEquals(inputHeader.getSeqNr(), copyHeader.getSeqNr());
     }
 
+    @Test
+    public void testSetDNSResponseAndRequest() {
+        assertFalse(header.isDNSResponse());
+        System.out.println(header);
+        header.setDNSResponse();
+        System.out.println(header);
+        assertTrue(header.isDNSResponse());
+        assertFalse(header.isDNSRequest());
+        header.setDNSRequest();
+        assertTrue(header.isDNSRequest());
+    }
+
     //TODO: add tests for flags of upload/download/showlist requests
 }

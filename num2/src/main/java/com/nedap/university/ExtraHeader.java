@@ -45,6 +45,7 @@ public class ExtraHeader {
 
     public void setLength(int length) {
         this.length = (byte)length;
+        setHeader();
     }
 
     public void setFlags(boolean syn, boolean ack, boolean fin, boolean pause) {
@@ -52,26 +53,67 @@ public class ExtraHeader {
         setAck(ack);
         setFin(fin);
         setPause(pause);
+        setHeader();
     }
 
     public void setUploadRequest() {
         setRequest(true);
         setRequestBit(false);
+        setHeader();
     }
 
     public void setDownloadRequest() {
         setRequest(true);
         setRequestBit(true);
+        setHeader();
     }
 
     public void setGetList() {
         setRequest(false);
         setRequestBit(true);
+        setHeader();
     }
 
     public void setNoRequest() {
         setRequest(false);
         setRequestBit(false);
+        setHeader();
+    }
+
+    private void setDNS(boolean DNS) {
+        if (DNS) {
+            flags = setBitToOne(flags, 7);
+        } else {
+            flags = setBitToZero(flags, 7);
+        }
+        setHeader();
+    }
+
+    private void setDNSflag(boolean DNS) {
+        if (DNS) {
+            flags = setBitToOne(flags, 6);
+        } else {
+            flags = setBitToZero(flags, 6);
+        }
+        setHeader();
+    }
+
+    public void setDNSRequest() {
+        setDNS(true);
+        setDNSflag(true);
+        setHeader();
+    }
+
+    public void setDNSResponse() {
+        setDNS(true);
+        setDNSflag(false);
+        setHeader();
+    }
+
+    public void setNoDNS() {
+        setDNS(false);
+        setDNSflag(false);
+        setHeader();
     }
 
     private void setRequest(boolean request) {
@@ -80,6 +122,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 5);
         }
+        setHeader();
     }
 
     private void setRequestBit(boolean requestBit) {
@@ -88,6 +131,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 4);
         }
+        setHeader();
     }
 
     public void setSyn(boolean syn) {
@@ -96,6 +140,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 3);
         }
+        setHeader();
     }
 
     public void setAck(boolean ack) {
@@ -104,6 +149,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 2);
         }
+        setHeader();
     }
 
     public void setFin(boolean fin) {
@@ -112,6 +158,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 1);
         }
+        setHeader();
     }
 
     public void setPause(boolean pause) {
@@ -120,6 +167,7 @@ public class ExtraHeader {
         } else {
             flags = setBitToZero(flags, 0);
         }
+        setHeader();
     }
 
     private byte setBitToOne(byte bits, int position) {
@@ -132,6 +180,18 @@ public class ExtraHeader {
 
     public int getLengthData() {
         return (int) length;
+    }
+
+    public boolean isDNSRequest() {
+        return isDNS() & isSet(flags, 6);
+    }
+
+    public boolean isDNSResponse() {
+        return isDNS() & !isSet(flags, 6);
+    }
+
+    public boolean isDNS() {
+        return isSet(flags, 7);
     }
 
     public boolean isRequest() {
@@ -175,6 +235,7 @@ public class ExtraHeader {
         this.ackNr[1] = (byte) (ackNr >> 16);
         this.ackNr[2] = (byte) (ackNr >> 8);
         this.ackNr[3] = (byte) ackNr;
+        setHeader();
     } //TODO: add exception if is set when isAck()==false + add in testExtraHeader
 
     public long getAckNr() {
@@ -191,6 +252,7 @@ public class ExtraHeader {
         this.seqNr[1] = (byte) (seqNr >> 16);
         this.seqNr[2] = (byte) (seqNr >> 8);
         this.seqNr[3] = (byte) seqNr;
+        setHeader();
     }
 
     public long getSeqNr() {
@@ -255,8 +317,14 @@ public class ExtraHeader {
         return header.length;
     }
 
+    @Override
     public String toString() {
         String headerString = "";
+        if (isDNSRequest()) {
+            headerString += "DNS request";
+        } else if (isDNSResponse()) {
+                headerString += "DNS response";
+        }
         if (isSyn()) {
             headerString += "SYN[" + getSeqNr() + "] ";
         }
