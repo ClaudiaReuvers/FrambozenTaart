@@ -69,6 +69,14 @@ class Sender {
         this.destAddress = destAddress;
     }
 
+    public void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) throws IOException {
+        header.setLength(data.length);
+        byte[] sendData = header.getHeader();//TODO
+        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, broadcastIP, broadcastPort);
+        System.out.println("Send: " + header);
+        socket.send(packet);
+    }
+
 //    public InetAddress getDestAddress() {
 //        return this.destAddress;
 //    }

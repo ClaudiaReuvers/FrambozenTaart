@@ -96,4 +96,12 @@ public class Receiver extends Thread {
         setClientPacketArrived();
         return packet;
     }
+
+    /**
+     * Returns the <code>DatagramSocket</code> on which this <code>Receiver</code> receives its packets.
+     * @return the receiving <code>DatagramSocket</code>
+     */
+    public DatagramSocket getReceivingSocket() {
+        return this.receivingSocket;
+    }
 }

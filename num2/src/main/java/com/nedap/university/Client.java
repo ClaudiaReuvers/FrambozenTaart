@@ -7,6 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -16,8 +17,8 @@ import java.util.Random;
  */
 public class Client extends Thread {
 
-//    private InetAddress destinationIP;
-//    private int destinationPort;
+    private InetAddress broadcastIP;
+    private int broadcastPort;
     private Sender sender;
     private Receiver receiver;
     private BufferedReader in;
@@ -34,13 +35,12 @@ public class Client extends Thread {
      * @throws SocketException if it is not possible to open a new <code>Socket</code> for communication
      */
     Client(InetAddress connectingIP, int connectingPort) throws SocketException {
-//        this.destinationIP = connectingIP;
-//        this.destinationPort = connectingPort;
+        this.broadcastIP = connectingIP;
+        this.broadcastPort = connectingPort;
         DatagramSocket sock = new DatagramSocket();
-        System.out.println("Created new socket on port " + sock.getLocalPort() + "(" + sock.getLocalAddress() + ")");
         this.sender = new Sender(sock);
-        sender.setDestPort(connectingPort);
-        sender.setDestAddress(connectingIP);
+//        sender.setDestPort(connectingPort);
+//        sender.setDestAddress(connectingIP);
         this.receiver = new Receiver(sock, this);
         receiver.start();
         this.in = new BufferedReader(new InputStreamReader(System.in));
@@ -71,10 +71,17 @@ public class Client extends Thread {
     private void determineResponse(DatagramPacket packetInQueue) {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
         if (receivedHeader.isDNSResponse()) {
+            int dataLength = receivedHeader.getLengthData();
+            System.out.println("DataLength: " + dataLength);
+            byte[] data = getDataOfPacket(packetInQueue.getData(), dataLength);
+            System.out.println("Data: " + new String(data));
+            int port = Integer.parseInt(new String(data).split(" ")[0]);
+            sender.setDestAddress(packetInQueue.getAddress());
+            sender.setDestPort(port);
+            sendSYN();
+        } else if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) { //SYN
             sender.setDestAddress(packetInQueue.getAddress());
             sender.setDestPort(packetInQueue.getPort());
-            sendSYN();
-        } else if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) {        //SYN
             respondToSYN(packetInQueue);
         } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {  //SYN ACK
             respondToSYNACK(packetInQueue);
@@ -87,6 +94,10 @@ public class Client extends Thread {
         } else {
             System.out.println("Unknown flags"); //TODO
         }
+    }
+
+    private byte[] getDataOfPacket(byte[] allData, int dataLength) {
+        return Arrays.copyOfRange(allData, ExtraHeader.headerLength() - 1, ExtraHeader.headerLength() + dataLength - 1);
     }
 
     private void respondToSYN(DatagramPacket packetInQueue) {
@@ -102,6 +113,7 @@ public class Client extends Thread {
 
     private void respondToACK(DatagramPacket packetInQueue) {
         System.out.println("ACK");
+        sendACK(packetInQueue);
         //TODO: response to ACK
     }
 
@@ -142,7 +154,6 @@ public class Client extends Thread {
     private void sendSYN() { //TODO: look if still valid
         int seqNr = (new Random()).nextInt(2^32);
         ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
-        System.out.print("Send header: " + header);
         nextAckExpected = seqNr + 1;
         try {
             sender.send(header, new byte[0]);
@@ -164,6 +175,8 @@ public class Client extends Thread {
         nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader header = new ExtraHeader(true, true, false, false, ackNr, seqNr);
         try {
+            System.out.println("Acknr: " + ackNr + ", secnr: " + seqNr);
+            System.out.println(receiver.getReceivingSocket().getInetAddress() + ", port: " + receiver.getReceivingSocket().getPort());
             getSender().send(header, new byte[0]);
         } catch (IOException e) {
             e.printStackTrace(); //TODO
@@ -199,7 +212,8 @@ public class Client extends Thread {
 //        byte[] headerBytes = header.getHeader();
 //        DatagramPacket packet = new DatagramPacket(headerBytes, headerBytes.length, destinationIP, destinationPort);
         try {
-            sender.send(header, new byte[0]);
+            sender.send(header, new byte[0], broadcastIP, broadcastPort);
+//            sender.send(header, new byte[0]);
         } catch (IOException e) {
             e.printStackTrace();//TODO
         }
@@ -219,6 +233,14 @@ public class Client extends Thread {
      */
     Sender getSender() {
         return this.sender;
+    }
+
+    /**
+     * Returns the <code>Receiver</code> of this <code>Client</code>.
+     * @return <code>Receiver</code> of the <code>Client</code>
+     */
+    Receiver getReceiver() {
+        return this.receiver;
     }
 }
 

@@ -9,7 +9,7 @@ public class ExtraHeader {
     private byte[] ackNr = new byte[4];
     private byte[] seqNr = new byte[4];
     private byte length;
-    private byte[] header;
+    private static byte[] header;
 
     /**
      * Creates a <code>ExtraHeader</code> with default values.
@@ -313,7 +313,7 @@ public class ExtraHeader {
         setHeader();
     }
 
-    public int headerLength() {
+    public static int headerLength() {
         return header.length;
     }
 
