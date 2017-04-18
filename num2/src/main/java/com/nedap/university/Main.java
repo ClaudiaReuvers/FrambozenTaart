@@ -67,7 +67,7 @@ public class Main {
         }
     }
 
-    private static String readString(String prompt) {
+    static String readString(String prompt) {
         System.out.print(prompt);
         String msg = null;
         try {

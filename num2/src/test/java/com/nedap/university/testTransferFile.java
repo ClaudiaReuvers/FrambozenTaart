@@ -33,7 +33,7 @@ public class testTransferFile {
     @Test
     public void testSetUp() {
         assertEquals("Files/" + filename, sending.getFilename());
-        assertEquals("Files/" + filename2, receiving.getFilename());
+        assertEquals(filename2, receiving.getFilename());
         assertEquals(sending.getBufferSize(), receiving.getBufferSize());
     }
 
@@ -47,7 +47,7 @@ public class testTransferFile {
             assertEquals(testSize, readData.length);
             assertEquals((counter + 1) * testSize, sending.getLocation());
             try {
-                receiving.appendToBuffer(readData);
+                receiving.appendToBuffer(readData, testSize);
             } catch (TransferFile.EndOfFileException e) {
                 e.printStackTrace();
             }
@@ -66,7 +66,7 @@ public class testTransferFile {
         while (counter < nrPackets) {
             byte[] readData = sending.readFromBuffer(testSize);
             try {
-                receiving.appendToBuffer(readData);
+                receiving.appendToBuffer(readData, testSize);
             } catch (TransferFile.EndOfFileException e) {
                 e.printStackTrace();
             }
@@ -76,9 +76,10 @@ public class testTransferFile {
         byte[] readData2 = sending.readFromBuffer(testSize);
         boolean testThrown = false;
         try {
-            receiving.appendToBuffer(readData2);
+            receiving.appendToBuffer(readData2, readData2.length);
         } catch (TransferFile.EndOfFileException e) {
             testThrown = true;
+//            receiving.saveReceivedFile();
         }
         assertTrue(testThrown);
         assertEquals(receiving.getBufferSize(), receiving.getLocation());

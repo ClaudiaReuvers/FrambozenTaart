@@ -3,9 +3,7 @@ package com.nedap.university;
 import javax.imageio.IIOException;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,7 +19,7 @@ public class TransferFile {
     private int location;
 
     TransferFile(String filename, int length) {
-        this.filename = "Files/" + filename;
+        this.filename = filename;
         this.buffer = new byte[length];
         this.location = 0;
     }
@@ -67,21 +65,33 @@ public class TransferFile {
 //        }
         location += length;
         if (location == buffer.length) {
-            saveReceivedFile();
+//            saveReceivedFile();
             throw new EndOfFileException("End of the file.\nSaved file as " + filename);
         }
     }
 
     void saveReceivedFile() {
-        try {
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(buffer));
-            File outputfile = new File(filename);
-            ImageIO.write(image, "jpg", outputfile);
-        } catch (IIOException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();//TODO
+        FileOutputStream outputFile = null;
+        boolean isValidPath = false;
+        while (!isValidPath) {
+            try {
+                System.out.println("Try to write file to " + filename);
+                outputFile = new FileOutputStream(filename);
+                isValidPath = true;
+            } catch (FileNotFoundException e) {
+                filename = Main.readString("New filename: ");
+            }
         }
+        System.out.println("Write file to " + filename);
+        try {
+            outputFile.write(buffer);
+        } catch (IOException e1) {
+            e1.printStackTrace();//TODO
+        }
+
+//            BufferedImage image = ImageIO.read(new ByteArrayInputStream(buffer));
+//            File outputfile = new File(filename);
+//            ImageIO.write(image, "jpg", outputfile);
     }
 
     class EndOfFileException extends Throwable {

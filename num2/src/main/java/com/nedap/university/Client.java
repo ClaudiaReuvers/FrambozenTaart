@@ -30,6 +30,7 @@ public class Client extends Thread {
     private boolean receiving = false;
     private TransferFile sendingFile;
     private TransferFile receivingFile;
+    private boolean FINreceived = false;
 
     /**
      * Creates a <code>Client</code> with a <code>Sender</code> and <code>Receiver</code>.
@@ -127,7 +128,7 @@ public class Client extends Thread {
         try {
             receivingFile.appendToBuffer(data, receivedHeader.getLengthData());
         } catch (TransferFile.EndOfFileException e) {
-            e.printStackTrace();
+            receivingFile.saveReceivedFile();
             receiving = false;
         }
         sendACK(receivedPacket);
@@ -139,9 +140,9 @@ public class Client extends Thread {
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
         nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
-        byte[] data = sendingFile.readFromBuffer(1024 - ExtraHeader.headerLength());
+        byte[] data = sendingFile.readFromBuffer(10240 - ExtraHeader.headerLength());
         System.out.println("Send " + sendingFile.getLocation() + "/" + sendingFile.getBufferSize());
-        if (data.length < (1024 - ExtraHeader.headerLength())) { //check if the buffer is smaller than expected, so you are at the end of the file
+        if (data.length < (10240 - ExtraHeader.headerLength())) { //check if the buffer is smaller than expected, so you are at the end of the file
             sending = false;
             System.out.println("Whole file send!");
             sendFIN = false;
@@ -177,6 +178,9 @@ public class Client extends Thread {
         System.out.println("Received txt: " + new String(data));
         String[] fileInfo = (new String(data).split(" "));
         String filename = fileInfo[1];
+//        String fileName = filename.split(".")[0];
+        System.out.println("Filename_" + filename + "_");
+
         int size = Integer.parseInt(fileInfo[0]);
         receivingFile = new TransferFile(filename, size);
         System.out.println("Requested for " + size + ", buffer made of length: " + receivingFile.getBufferSize());
@@ -273,13 +277,37 @@ public class Client extends Thread {
     }
 
     private void respondToFIN(DatagramPacket packetInQueue) {
-        System.out.println("FIN");
-        //TODO: response to FIN
+        FINreceived = true;
+        sendFINACK(packetInQueue);
+    }
+
+    private void sendFINACK(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, true, false, ackNr, seqNr);
+        try {
+            getSender().send(sendingHeader, new byte[0]);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+        shutdown();
+    }
+
+    private void shutdown() {
+        try {
+            Thread.sleep(2000);//TODO: chose other time-out time
+        } catch (InterruptedException e) {
+        }
+        System.out.println("Shutting down");
+        receiver.getReceivingSocket().close();
+        System.exit(0);
     }
 
     private void respondToFINACK(DatagramPacket packetInQueue) {
         System.out.println("FIN ACK");
-        //TODO: response to FIN ACK
+        shutdown();
     }
 
 //    public void init() {
@@ -396,5 +424,9 @@ public class Client extends Thread {
      */
     Receiver getReceiver() {
         return this.receiver;
+    }
+
+    public boolean getFINreceived() {
+        return this.FINreceived;
     }
 }

@@ -76,14 +76,16 @@ public class Receiver extends Thread {
      * @return <code>DatagramPacket</code> retrieved from the socket
      */
     private DatagramPacket receivePackets(){
-        byte[] buf = new byte[1024];
+        byte[] buf = new byte[10240];
         DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
         try {
             receivingSocket.receive(receivedPacket);
             ExtraHeader h = ExtraHeader.returnHeader(receivedPacket.getData());
             System.out.println("Received: " + ExtraHeader.returnHeader(receivedPacket.getData()));
         } catch (IOException e) {
-            e.printStackTrace();//TODO
+            if (!client.getFINreceived()) {
+                System.out.println("Could not receive a file from this socket (" + receivingSocket.getInetAddress() + "::" + receivingSocket.getPort() + ")");
+            }
         }
         return receivedPacket;
     }
