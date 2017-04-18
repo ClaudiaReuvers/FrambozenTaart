@@ -59,14 +59,16 @@ public class TransferFile {
         return data;
     }
 
-    void appendToBuffer(byte[] data) throws EndOfFileException {
-        for (int i = 0; i < data.length; i++) {
-            buffer[i + location] = data[i];
-        }
-        location += data.length;
+    void appendToBuffer(byte[] data, int length) throws EndOfFileException {
+        System.out.println("Append from " + location + " with length " + length);
+        System.arraycopy(data,0, buffer, location, length);
+//        for (int i = 0; i < data.length; i++) {
+//            buffer[i + location] = data[i];
+//        }
+        location += length;
         if (location == buffer.length) {
             saveReceivedFile();
-            throw new EndOfFileException("Final data of this file received.");
+            throw new EndOfFileException("End of the file.\nSaved file as " + filename);
         }
     }
 

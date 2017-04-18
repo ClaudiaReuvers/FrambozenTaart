@@ -8,7 +8,7 @@ public class ExtraHeader {
     private byte flags;
     private byte[] ackNr = new byte[4];
     private byte[] seqNr = new byte[4];
-    private byte length;
+    private byte[] length = new byte[4];
     private static byte[] header;
 
     /**
@@ -43,9 +43,21 @@ public class ExtraHeader {
         setHeader();
     }
 
-    public void setLength(int length) {
-        this.length = (byte)length;
+    public void setLength(int ackNr) {
+        this.length[0] = (byte) (ackNr >> 24);
+        this.length[1] = (byte) (ackNr >> 16);
+        this.length[2] = (byte) (ackNr >> 8);
+        this.length[3] = (byte) ackNr;
         setHeader();
+    } //TODO: add exception if is set when isAck()==false + add in testExtraHeader
+
+    public int getLengthData() {
+        int result = 0x00FF & length[0];
+        for (int i = 1; i < length.length; i++) {
+            result <<= 8;
+            result += 0x00FF & length[i];
+        }
+        return result;
     }
 
     public void setFlags(boolean syn, boolean ack, boolean fin, boolean pause) {
@@ -178,10 +190,6 @@ public class ExtraHeader {
         return (byte) (bits & ~(1 << position));
     }
 
-    public int getLengthData() {
-        return (int) length;
-    }
-
     public boolean isDNSRequest() {
         return isDNS() & isSet(flags, 6);
     }
@@ -199,15 +207,15 @@ public class ExtraHeader {
     }
 
     public boolean isDownloadRequest() {
-        return isSet(flags, 4) && isSet(flags, 5);
+        return isSet(flags, 5) && isSet(flags, 4);
     }
 
     public boolean isUploadRequest() {
-        return isSet(flags, 4) && !isSet(flags, 5);
+        return isSet(flags, 5) && !isSet(flags, 4);
     }
 
     public boolean isGetList() {
-        return !isSet(flags, 4) && isSet(flags, 5);
+        return !isSet(flags, 5) && isSet(flags, 4);
     }
 
     public boolean isSyn() {
@@ -265,7 +273,7 @@ public class ExtraHeader {
     }
 
     private void setHeader() {
-        header = new byte[1 + 1 + ackNr.length + seqNr.length];
+        header = new byte[1 + ackNr.length + seqNr.length + length.length];
         header[0] = flags;
         for (int i = 0; i < ackNr.length; i++) {
             header[i+1] = ackNr[i];
@@ -273,10 +281,13 @@ public class ExtraHeader {
         for (int i = 0; i < seqNr.length; i++) {
             header[i+5] = seqNr[i];
         }
-        header[9] = length;
+        for (int i = 0; i < length.length; i++) {
+            header[i+9] = length[i];
+        }
+//        header[9] = length;
     }
 
-    public byte getLengthByte() {
+    public byte[] getLengthByte() {
         return this.length;
     }
 
@@ -309,7 +320,10 @@ public class ExtraHeader {
         for (int i = 0; i < ackNr.length; i++) {
             this.seqNr[i] = bytes[i + 5];
         }
-        this.length = bytes[9];
+        for (int i = 0; i < length.length; i++) {
+            this.length[i] = bytes[i +9];
+        }
+//        this.length = bytes[9];
         setHeader();
     }
 

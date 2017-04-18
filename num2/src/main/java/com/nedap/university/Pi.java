@@ -1,5 +1,6 @@
 package com.nedap.university;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.*;
 
@@ -62,7 +63,7 @@ public class Pi extends Thread{
     private void respondToDNSRequest(DatagramPacket receivedPacket) throws SocketException {
         ExtraHeader header = new ExtraHeader();
         header.setDNSResponse();
-        Client client = new Client(receivedPacket.getAddress(), receivedPacket.getPort());
+        Client client = new Client(receivedPacket.getAddress(), receivedPacket.getPort(), 15423); //TODO: remove after debugging, otherwise it is not possible to have multiple clients
         DatagramSocket receivingSocket = client.getReceiver().getReceivingSocket();
         System.out.println("Opened socket on " + receivingSocket.getLocalPort());
         String socketString = Integer.toString(receivingSocket.getLocalPort());
@@ -95,188 +96,40 @@ public class Pi extends Thread{
 //        }
     }
 
-    private byte[] joinByteArrays(byte[] array1, byte[] array2) {
-        byte[] data = new byte[array1.length + array2.length];
-        for (int i = 0; i < array1.length; i++) {
-            data[i] = array1[i];
+//    private byte[] joinByteArrays(byte[] array1, byte[] array2) {
+//        byte[] data = new byte[array1.length + array2.length];
+//        for (int i = 0; i < array1.length; i++) {
+//            data[i] = array1[i];
+//        }
+//        for (int i = 0; i < array2.length; i++) {
+//            data[i + array1.length - 1] = array2[i];
+//        }
+//        return data;
+//    }
+
+    byte[] joinByteArrays(byte[] array1, byte[] array2) {
+//        byte[] data = new byte[array1.length + array2.length];
+//        for (int i = 0; i < array1.length; i++) {
+//            data[i] = array1[i];
+//        }
+//        for (int i = 0; i < array2.length; i++) {
+//            data[i + array1.length - 1] = array2[i];
+//        }
+//        return data;
+//        byte[] combinedData = new byte[array1.length + array2.length];
+//        System.arraycopy(array1,0,combinedData,0         ,array1.length);
+//        System.arraycopy(array2,0,combinedData,array1.length+1,array2.length);
+//        return combinedData;
+
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            outputStream.write(array1);
+            outputStream.write(array2);
+        } catch (IOException e){
+            System.out.println("Could not write this!");
         }
-        for (int i = 0; i < array2.length; i++) {
-            data[i + array1.length - 1] = array2[i];
-        }
-        return data;
+        return outputStream.toByteArray( );
+
     }
 }
-
-//    private long nextAckExpected;
-//    private boolean connectionSetUp = false;
-//
-//    private void handleIncommingPacket(DatagramPacket receivedPacket) {
-//        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-//        System.out.print("Rcvd header: "); printHeader(receivedHeader);
-//        if (checkReceivedAckNr(receivedHeader)) {
-//            return;
-//        }
-//        byte[] sendingData;
-//        long sendSeqNr = receivedHeader.getAckNr();
-//        long increaseNumbering = 1;//receivedPacket.getData().length - receivedHeader.getLength() + 1;
-//        long sendAckNr = receivedHeader.getSeqNr() + increaseNumbering;
-//        nextAckExpected = sendSeqNr + increaseNumbering;
-//        if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) {//SYN (no ACK, no FIN)
-//            System.out.println("I see a SYN packet"); //TODO: create a new Socket for communication s.t. the 'main' socket is open for new clients
-//            sendSeqNr = (new Random()).nextInt(2^32);
-//            nextAckExpected = sendSeqNr + increaseNumbering;
-////            long sendAckNr = receivedHeader.getSeqNr() + 1;
-////            nextAckExpected = sendSeqNr + 1;
-//            byte[] header = createSYNACK(sendSeqNr, sendAckNr);
-//            sendingData = header;
-//        } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {//SYN ACK (no FIN)
-//            System.out.println("I see a SYN ACK packet");
-////            long sendSeqNr = receivedHeader.getAckNr();
-////            long sendAckNr = receivedHeader.getSeqNr() + 1;
-////            nextAckExpected = sendSeqNr + 1;
-//            byte[] header = createACK(sendSeqNr, sendAckNr);
-//            sendingData = header;
-//        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {//ACK (no SYN, no FIN)
-//            System.out.println("I see an ACK packet of length " + receivedPacket.getLength()); //TODO: set adapt nextACKExpected & sendAckNr for data length
-//            if (receivedHeader.isRequest()) {
-//                String inhoud = getTextInData(receivedPacket);
-//                if (receivedHeader.isSEND()) {
-//                    System.out.println("Request to send: " + inhoud);
-//                    byte[] header = createACK(sendSeqNr, sendAckNr);
-//                    sendingData = header;
-//                } else {//IS GET
-//                    System.out.println("Request to GET: " + inhoud);
-//                    byte[] header = createACK(sendSeqNr, sendAckNr);
-//                    sendingData = header;
-//                }
-//            } else {
-//                byte[] header = createACK(sendSeqNr, sendAckNr);
-//                sendingData = header;
-//                if (receivedHeader.isSEND()) {//nothing
-//
-//                } else {//show list
-//
-//                }
-//
-//            }
-//
-////            long sendSeqNr = receivedHeader.getAckNr();
-////            long sendAckNr = receivedHeader.getSeqNr() + 1;
-////            nextAckExpected = sendSeqNr + 1;
-////            byte[] header = createACK(sendSeqNr, sendAckNr);
-////            if (data != null) {
-////                sendingData = joinHeaderAndData(header, data);
-////            } else {
-////                sendingData = header;
-////            }
-//        } else if (!receivedHeader.isSyn() & !receivedHeader.isAck() & receivedHeader.isFin()) {//FIN (no SYN, no ACK)
-//            System.out.println("I see an FIN packet");
-////            long sendSeqNr = receivedHeader.getAckNr();
-////            long sendAckNr = receivedHeader.getSeqNr() + 1;
-////            nextAckExpected = sendSeqNr + 1;
-//            byte[] header = createFINACK(sendSeqNr, sendAckNr);
-//            sendingData = header;
-//        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & receivedHeader.isFin()) {//FIN ACK (no SYN)
-//            System.out.println("I see an FIN ACK packet");
-////            long sendSeqNr = receivedHeader.getAckNr();
-////            long sendAckNr = receivedHeader.getSeqNr() + 1;
-////            nextAckExpected = sendSeqNr + 1;
-//            byte[] header = createACK(sendSeqNr, sendAckNr);
-//            sendingData = header;
-//        } else {
-//            //TODO: invalid flag combination
-//            System.out.println("Unrecognized packet");
-//            return;
-//        }
-//        sendToClient(sendingData, receivedPacket.getAddress(), receivedPacket.getPort());
-//    }
-//
-//    private byte[] joinHeaderAndData(byte[] header, byte[] data) {
-//        byte[] allData = new byte[header.length + data.length];
-//        int count = 0;
-//        for (int i = 0; i < header.length; i++) {
-//            allData[i] = header[i];
-//            count++;
-//        }
-//        for (int i = 0; i < data.length; i++) {
-//            allData[count + i] = data[i];
-//        }
-//        return allData;
-//    }
-//
-//    private String getTextInData(DatagramPacket receivedPacket) {
-//        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-//        int length = receivedHeader.getLength();
-//        byte[] data = new byte[length];
-//        for (int i = 0; i < data.length; i++) {
-//            data[i] = receivedPacket.getData()[i + receivedHeader.headerLength()];
-//        }
-//        return new String(data);
-//    }
-//
-//    private byte[] createFINACK(long sendSeqNr, long sendAckNr) {
-//        return (new ExtraHeader(false, true, true, false, sendAckNr, sendSeqNr)).getHeader();
-//    }
-//
-//    private byte[] createFIN(long sendSeqNr, long sendAckNr) {
-//        return (new ExtraHeader(false, false, true, false, sendAckNr, sendSeqNr)).getHeader();
-//    }
-//
-//    private byte[] createACK(long sendSeqNr, long sendAckNr) {
-//        return (new ExtraHeader(false, true, false, false, sendAckNr, sendSeqNr)).getHeader();
-//    }
-//
-//    private void sendToClient(byte[] sendData, InetAddress IP, int port) {
-//        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IP, port);
-//        System.out.print("Send header: "); printHeader(ExtraHeader.returnHeader(sendData));
-//        try {
-//            socket.send(sendPacket);
-//        } catch (IOException e) {
-//            e.printStackTrace();//TODO: not able to send packet
-//        }
-//    }
-//
-//    private byte[] createSYNACK(long sendSeqNr, long sendAckNr) {
-//        return (new ExtraHeader(true, true, false, false, sendAckNr, sendSeqNr)).getHeader();
-//    }
-//
-//    private boolean checkReceivedAckNr(ExtraHeader receivedHeader) {
-//        if (receivedHeader.isAck()) {
-//            long receivedAckNr = receivedHeader.getAckNr();
-//            if (receivedAckNr != nextAckExpected) {
-//                //TODO: what to do if the ack is not as expected
-//                System.out.println("The received ackNr is " + receivedAckNr + ", but " + nextAckExpected + " was expected.");
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
-//
-//    private void printHeader(ExtraHeader header) {
-//        System.out.println("Length: " + header.getLength() + ". SYN: " + header.isSyn() + "[" + header.getSeqNr() + "]. ACK: " + header.isAck() + "[" + header.getAckNr() + "].");
-//    }
-//
-//    private void writeByteArrayToFile(byte[] byteArrayOfFile, String name) {
-//        try {
-//            BufferedImage image = ImageIO.read(new ByteArrayInputStream(byteArrayOfFile));
-//            File outputfile = new File(name);
-//            ImageIO.write(image, "jpg", outputfile);
-//        } catch (IOException e) {
-//            e.printStackTrace(); //TODO
-//        }
-//    }
-//
-//    private byte[] writeFileToByteArray(String filename) {
-//        byte[] fileInBytes;
-//        filename = "src/" + filename;
-//        Path path = Paths.get(filename);
-//        try {
-//            fileInBytes = Files.readAllBytes(path);
-//        } catch (IOException e) {
-//            e.printStackTrace();//TODO
-//            fileInBytes = new byte[0];
-//        }
-//        return fileInBytes;
-//    }
-//}
-

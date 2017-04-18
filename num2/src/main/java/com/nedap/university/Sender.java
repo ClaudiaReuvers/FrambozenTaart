@@ -1,9 +1,17 @@
 package com.nedap.university;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
@@ -35,15 +43,11 @@ class Sender {
      */
     void send(ExtraHeader header, byte[] data) throws IOException {
         header.setLength(data.length);
-        byte[] sendData = header.getHeader();//TODO
-        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
+        byte[] sendData = joinByteArrays(header.getHeader(), data);
         System.out.println("Send: " + header);
+        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
         socket.send(packet);
     }
-
-//    public void setSourcePort(int sourcePort) {
-//        this.sourcePort = sourcePort;
-//    }
 
     /**
      * Sets the port to which the packets must be send.
@@ -52,14 +56,6 @@ class Sender {
     void setDestPort(int destPort) {
         this.destPort = destPort;
     }
-
-//    public int getSourcePort() {
-//        return this.sourcePort;
-//    }
-
-//    public int getDestPort() {
-//        return this.destPort;
-//    }
 
     /**
      * Sets the InetAddress to which the packets must be send.
@@ -71,15 +67,35 @@ class Sender {
 
     public void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) throws IOException {
         header.setLength(data.length);
-        byte[] sendData = header.getHeader();//TODO
+        byte[] sendData = header.getHeader();//joinByteArrays(header.getHeader(), data);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, broadcastIP, broadcastPort);
         System.out.println("Send: " + header);
         socket.send(packet);
     }
 
-//    public InetAddress getDestAddress() {
-//        return this.destAddress;
-//    }
+    byte[] joinByteArrays(byte[] array1, byte[] array2) {
+//        byte[] data = new byte[array1.length + array2.length];
+//        for (int i = 0; i < array1.length; i++) {
+//            data[i] = array1[i];
+//        }
+//        for (int i = 0; i < array2.length; i++) {
+//            data[i + array1.length - 1] = array2[i];
+//        }
+//        return data;
+//        byte[] combinedData = new byte[array1.length + array2.length];
+//        System.arraycopy(array1,0,combinedData,0         ,array1.length);
+//        System.arraycopy(array2,0,combinedData,array1.length+1,array2.length);
+//        return combinedData;
 
 
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            outputStream.write(array1);
+            outputStream.write(array2);
+        } catch (IOException e){
+            System.out.println("Could not write this!");
+        }
+        return outputStream.toByteArray( );
+
+    }
 }

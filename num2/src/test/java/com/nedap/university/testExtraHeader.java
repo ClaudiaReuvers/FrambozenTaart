@@ -19,6 +19,7 @@ public class testExtraHeader {
     public void setUp() {
         header = new ExtraHeader();
         inputHeader = new ExtraHeader(true, true, true, true, 2, 2);
+        inputHeader.setLength(20);
     }
 
     @Test
@@ -30,20 +31,20 @@ public class testExtraHeader {
         assertFalse(header.isPause());
         assertEquals(0, header.getAckNr());
         assertEquals(0, header.getSeqNr());
-        assertEquals(10, header.getHeader().length);
+        assertEquals(13, header.getHeader().length);
         assertEquals(header.headerLength(), header.getHeader().length);
     }
 
     @Test
     public void testSetUpHeader2() {
-        assertEquals(0, inputHeader.getLengthData());
+        assertEquals(20, inputHeader.getLengthData());
         assertTrue(inputHeader.isSyn());
         assertTrue(inputHeader.isAck());
         assertTrue(inputHeader.isFin());
         assertTrue(inputHeader.isPause());
         assertEquals(2, inputHeader.getAckNr());
         assertEquals(2, inputHeader.getSeqNr());
-        assertEquals(10, inputHeader.getHeader().length);
+        assertEquals(13, inputHeader.getHeader().length);
         assertEquals(inputHeader.headerLength(), inputHeader.getHeader().length);
     }
 
@@ -125,6 +126,8 @@ public class testExtraHeader {
     @Test
     public void testReturnHeader() {
         ExtraHeader copyHeader = ExtraHeader.returnHeader(inputHeader.getHeader());
+        System.out.println("Input: " + inputHeader);
+        System.out.println("Copy: " + copyHeader);
         assertEquals(inputHeader.getLengthData(), copyHeader.getLengthData());
         assertEquals(inputHeader.isSyn(), copyHeader.isSyn());
         assertEquals(inputHeader.isAck(), copyHeader.isAck());
@@ -144,6 +147,25 @@ public class testExtraHeader {
         assertFalse(header.isDNSRequest());
         header.setDNSRequest();
         assertTrue(header.isDNSRequest());
+    }
+
+    @Test
+    public void testAndSetUploadAndDownloadRequest() {
+        assertFalse(header.isDownloadRequest());
+        assertFalse(header.isUploadRequest());
+        assertFalse(header.isGetList());
+        header.setDownloadRequest();
+        assertTrue(header.isDownloadRequest());
+        assertFalse(header.isUploadRequest());
+        assertFalse(header.isGetList());
+        header.setUploadRequest();
+        assertFalse(header.isDownloadRequest());
+        assertTrue(header.isUploadRequest());
+        assertFalse(header.isGetList());
+        header.setGetList();
+        assertFalse(header.isDownloadRequest());
+        assertFalse(header.isUploadRequest());
+        assertTrue(header.isGetList());
     }
 
     //TODO: add tests for flags of upload/download/showlist requests

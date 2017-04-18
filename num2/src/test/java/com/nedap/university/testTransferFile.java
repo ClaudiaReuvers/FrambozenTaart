@@ -6,7 +6,6 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -83,5 +82,12 @@ public class testTransferFile {
         }
         assertTrue(testThrown);
         assertEquals(receiving.getBufferSize(), receiving.getLocation());
+        TransferFile testReceiving = null;
+        try {
+            testReceiving = new TransferFile(filename2);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        assertEquals(sending.getBufferSize(), testReceiving.getBufferSize()); //TODO: look how it can be that the size differs
     }
 }
