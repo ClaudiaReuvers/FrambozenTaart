@@ -19,6 +19,9 @@ public class Receiver extends Thread {
 //    private InetAddress destAddress;
     private boolean isConnected = true;
     private Queue<DatagramPacket> queue;
+    private Queue<DatagramPacket> receivedFrames;
+    private long LastSeqReceived;
+    private int RECEIVERWINDOW = 4;
 
     /**
      * Creates a <code>Receiver</code> connected to a specified <code>DatagramSocket</code> and <code>Client</code>.
@@ -29,6 +32,7 @@ public class Receiver extends Thread {
         this.receivingSocket = receivingSocket;
         this.client = client;
         this.queue = new ConcurrentLinkedQueue<>();
+        this.receivedFrames = new ConcurrentLinkedQueue<>();
     }
 
     /**
@@ -39,10 +43,64 @@ public class Receiver extends Thread {
     public void run() {
         while (isConnected) { //TODO: set this boolean to false when no longer connected
             DatagramPacket receivedPacket = receivePackets();
-            queue.add(receivedPacket);
-            setClientPacketArrived();
+            while (receivedPacket != null) {
+                receivedFrames.add(receivedPacket);
+                ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+                if (receivedHeader.isSyn()) {
+                    System.out.println("Received a SYN, LSeqR set to " + (receivedHeader.getSeqNr() - 1));
+                    setLastFrameReceived(receivedHeader.getSeqNr() - 1);
+                } else if (receivedHeader.isDNSResponse()) {
+                    queue.add(receivedPacket);
+
+                }
+                if (queue.contains(receivedPacket)) {
+                    System.out.println("Set rcvdPkt to null");
+                    receivedPacket = null;
+                }
+                while (isInReceivingWindow(receivedPacket)) {
+                    queue.add(receivedPacket);
+                    System.out.println("QueueSize: " + queue.size());
+                    updateLastFrameReceived();
+                    System.out.println("LSeqR = " + LastSeqReceived);
+//                    setClientPacketArrived();
+                }
+                setClientPacketArrived();
+                receivedPacket = receivePackets();
+            }
         }
         System.out.println("No longer connected.");
+    }
+
+    private void updateLastFrameReceived() {
+        boolean updated = false;
+        while (!updated) {
+            for (DatagramPacket rcvd : receivedFrames) {
+                ExtraHeader header = ExtraHeader.returnHeader(rcvd.getData());
+                long seqNr = header.getSeqNr();
+                if (seqNr == LastSeqReceived + 1) {
+                    LastSeqReceived++;
+                    receivedFrames.remove(rcvd);
+                    queue.add(rcvd);
+                    System.out.println("LSeqR updated to " + LastSeqReceived + ". Packet added to queue; " + header);
+                    updated = true;
+                }
+            }
+        }
+    }
+
+    private boolean isInReceivingWindow(DatagramPacket receivedPacket) {
+        if (receivedPacket == null) {
+            return false;
+        }
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+//        if (receivedHeader.isDNSRequest() | receivedHeader.isDNSResponse()) {
+//            receivedFrames.add(receivedPacket);
+//            System.out.println("Added to queue: " + receivedHeader);
+//            setClientPacketArrived();
+//            return true;
+//        }
+        long nr = receivedHeader.getSeqNr();
+        return (nr > LastSeqReceived && nr <= (LastSeqReceived + RECEIVERWINDOW));
     }
 
     /**
@@ -78,10 +136,11 @@ public class Receiver extends Thread {
     private DatagramPacket receivePackets(){
         byte[] buf = new byte[10240];
         DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
+//        ExtraHeader h = null;
         try {
             receivingSocket.receive(receivedPacket);
-            ExtraHeader h = ExtraHeader.returnHeader(receivedPacket.getData());
-            System.out.println("Received: " + ExtraHeader.returnHeader(receivedPacket.getData()));
+//            h = ExtraHeader.returnHeader(receivedPacket.getData());
+//            System.out.println("Received: " + ExtraHeader.returnHeader(receivedPacket.getData()));
         } catch (IOException e) {
             if (!client.getFINreceived()) {
                 System.out.println("Could not receive a file from this socket (" + receivingSocket.getInetAddress() + "::" + receivingSocket.getPort() + ")");
@@ -106,5 +165,9 @@ public class Receiver extends Thread {
      */
     public DatagramSocket getReceivingSocket() {
         return this.receivingSocket;
+    }
+
+    private void setLastFrameReceived(long LFR) {
+        this.LastSeqReceived = LFR;
     }
 }

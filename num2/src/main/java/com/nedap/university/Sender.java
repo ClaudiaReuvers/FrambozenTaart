@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.nedap.university.Utils.Utils.joinByteArrays;
 
@@ -25,6 +27,7 @@ class Sender implements TimeOutEventHandler {
     static final int TIMEOUT = 2000;
     private ConcurrentHashMap<Long, DatagramPacket> unAcknowledgedPackets = new ConcurrentHashMap<>();
     private long nextAckExpected;
+    private Queue<DatagramPacket> queue;
 
     /**
      * Creates a Sender with a socket connected.
@@ -32,6 +35,7 @@ class Sender implements TimeOutEventHandler {
      */
     Sender(DatagramSocket socket) {
         this.socket = socket;
+        this.queue = new ConcurrentLinkedQueue<>();
     }
 
     /**
@@ -45,19 +49,19 @@ class Sender implements TimeOutEventHandler {
         header.setLength(data.length);
         nextAckExpected = header.getSeqNr() + data.length + 1;
         byte[] sendData = joinByteArrays(header.getHeader(), data);
-        System.out.println("Send: " + header);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
         try {
             socket.send(packet);
-            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
-            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+            addUnackedPacket(header.getSeqNr(), packet);
+            Utils.Timeout.SetTimeout(TIMEOUT, this, header.getSeqNr());
+            System.out.println("Send: " + header);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
     }
 
-    private void addUnackedPacket(long ackNr, DatagramPacket packet) {
-        unAcknowledgedPackets.put(ackNr, packet);
+    private void addUnackedPacket(long seqNr, DatagramPacket packet) {
+        unAcknowledgedPackets.put(seqNr, packet);
     }
 
     /**
@@ -83,33 +87,44 @@ class Sender implements TimeOutEventHandler {
         System.out.println("Send: " + header);
         try {
             socket.send(packet);
-            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
-            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+//            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
+//            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
     }
 
     @Override
-    public void TimeoutElapsed(DatagramPacket tag) {
-        if (tag instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) tag;
+    public void TimeoutElapsed(long seqNr) {
+//        if (tag instanceof DatagramPacket) {
+//            DatagramPacket packet = (DatagramPacket) tag;
 //            DatagramPacket packet = unAcknowledgedPackets.get(ackNr);
+        DatagramPacket packet = unAcknowledgedPackets.get(seqNr);
             System.out.println("Resend: " + ExtraHeader.returnHeader(packet.getData()));
             try {
                 socket.send(packet);
-                Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+                Utils.Timeout.SetTimeout(TIMEOUT, this, ExtraHeader.returnHeader(packet.getData()).getSeqNr() + 1);
             } catch (IOException e) {
                 System.out.println("Unable to resend packet: " + ExtraHeader.returnHeader(packet.getData()));
             }
-        }
+//        }
     }
 
     void acknowledgePacket(long ackNr) {
-        unAcknowledgedPackets.remove(ackNr);
+       if (unAcknowledgedPackets.remove(ackNr) != null) {
+           System.out.println("Removed packet with ackNr " + ackNr);
+       }
     }
 
     public long getNextAckExpected() {
         return nextAckExpected;
+    }
+
+    public void addToQueue(ExtraHeader sendingHeader, byte[] data) {
+        sendingHeader.setLength(data.length);
+//        nextAckExpected = sendingHeader.getSeqNr() + data.length + 1;
+        byte[] sendData = joinByteArrays(sendingHeader.getHeader(), data);
+        DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
+        queue.add(packet);
     }
 }
