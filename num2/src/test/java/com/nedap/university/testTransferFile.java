@@ -24,6 +24,7 @@ public class testTransferFile {
         filename2 = "Test/TryFile2.jpg";
         try {
             sending = new TransferFile(filename);
+            sending.createPath();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -33,7 +34,7 @@ public class testTransferFile {
     @Test
     public void testSetUp() {
         assertEquals("Files/" + filename, sending.getFilename());
-        assertEquals(filename2, receiving.getFilename());
+        assertEquals("Files/" + filename2, receiving.getFilename());
         assertEquals(sending.getBufferSize(), receiving.getBufferSize());
     }
 
@@ -84,11 +85,11 @@ public class testTransferFile {
         assertTrue(testThrown);
         assertEquals(receiving.getBufferSize(), receiving.getLocation());
         TransferFile testReceiving = null;
-        try {
+//        try {
             testReceiving = new TransferFile(filename2);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 //        assertEquals(sending.getBufferSize(), testReceiving.getBufferSize()); //TODO: look how it can be that the size differs
     }
 }

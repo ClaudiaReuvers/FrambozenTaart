@@ -41,12 +41,16 @@ class Sender {
      * @param data data of the packet
      * @throws IOException if the <code>Sender</code> is not able to send the packet to the destinaation
      */
-    void send(ExtraHeader header, byte[] data) throws IOException {
+    void send(ExtraHeader header, byte[] data){
         header.setLength(data.length);
         byte[] sendData = joinByteArrays(header.getHeader(), data);
         System.out.println("Send: " + header);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
-        socket.send(packet);
+        try {
+            socket.send(packet);
+        } catch (IOException e) {
+            System.out.println("Unable to send packet: " + header);
+        }
     }
 
     /**
@@ -65,12 +69,16 @@ class Sender {
         this.destAddress = destAddress;
     }
 
-    public void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) throws IOException {
+    public void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) {
         header.setLength(data.length);
         byte[] sendData = header.getHeader();//joinByteArrays(header.getHeader(), data);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, broadcastIP, broadcastPort);
         System.out.println("Send: " + header);
-        socket.send(packet);
+        try {
+            socket.send(packet);
+        } catch (IOException e) {
+            System.out.println("Unable to send packet: " + header);
+        }
     }
 
     byte[] joinByteArrays(byte[] array1, byte[] array2) {

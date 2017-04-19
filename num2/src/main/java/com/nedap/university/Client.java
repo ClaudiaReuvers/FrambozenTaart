@@ -85,25 +85,18 @@ public class Client extends Thread {
     private void determineResponse(DatagramPacket packetInQueue) {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
         if (receivedHeader.isDNSResponse()) {
-            int dataLength = receivedHeader.getLengthData();
-            System.out.println("DataLength: " + dataLength);
-            byte[] data = getDataOfPacket(packetInQueue.getData(), dataLength);
-            System.out.println("Data: " + new String(data));
-            int port = Integer.parseInt(new String(data).split(" ")[0]);
-            sender.setDestAddress(packetInQueue.getAddress());
-            sender.setDestPort(port);
-            sendSYN();
+            respondToDNSResponse(packetInQueue);
         } else if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) { //SYN
             sender.setDestAddress(packetInQueue.getAddress());
             sender.setDestPort(packetInQueue.getPort());
-            respondToSYN(packetInQueue);
+            sendSYNACK(packetInQueue);
         } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {  //SYN ACK
             respondToSYNACK(packetInQueue);
         } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { //    ACK
             if (receivedHeader.isUploadRequest()) {
                 respondToUploadRequest(packetInQueue);
             } else if (receivedHeader.isDownloadRequest()) {
-                respondToDownLoadRequest();
+                respondToDownLoadRequest(packetInQueue);
             } else if (sending) {
                 sendData(packetInQueue);
             } else if (receiving) {
@@ -115,87 +108,36 @@ public class Client extends Thread {
         } else if (!receivedHeader.isSyn() & !receivedHeader.isAck() & receivedHeader.isFin()) { //FIN
             respondToFIN(packetInQueue);
         } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & receivedHeader.isFin()) {  //FIN ACK
-            respondToFINACK(packetInQueue);
+            respondToFINACK();
         } else {
-            System.out.println("Unknown flags"); //TODO
+            System.out.println("Unknown flags, no response is send.");
         }
     }
 
-    private void receiveData(DatagramPacket receivedPacket) {
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-        byte[] data = getDataOfPacket(receivedPacket.getData(), receivedHeader.getLengthData());
-        System.out.println("Add data at location: " + receivingFile.getLocation() + "(" + data.length + ")/" + receivingFile.getBufferSize());
-        try {
-            receivingFile.appendToBuffer(data, receivedHeader.getLengthData());
-        } catch (TransferFile.EndOfFileException e) {
-            receivingFile.saveReceivedFile();
-            receiving = false;
-        }
-        sendACK(receivedPacket);
+    /**
+     * Respond to a DNSresponse of the server.
+     * The destination address and port are set to the IPaddress of the Pi and the port given by the Pi.
+     * @param packetInQueue <code>DatagramPacket</code> to which the DNSresponse is a reply
+     */
+    private void respondToDNSResponse(DatagramPacket packetInQueue) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
+        int dataLength = receivedHeader.getLengthData();
+        System.out.println("DataLength: " + dataLength);
+        byte[] data = getDataOfPacket(packetInQueue.getData());
+        System.out.println("Data: " + new String(data));
+        int port = Integer.parseInt(new String(data).split(" ")[0]);
+        sender.setDestAddress(packetInQueue.getAddress());
+        sender.setDestPort(port);
+        sendSYN();
     }
 
-    private void sendData(DatagramPacket receivedPacket) {
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-        long seqNr = receivedHeader.getAckNr();
-        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
-        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
-        byte[] data = sendingFile.readFromBuffer(10240 - ExtraHeader.headerLength());
-        System.out.println("Send " + sendingFile.getLocation() + "/" + sendingFile.getBufferSize());
-        if (data.length < (10240 - ExtraHeader.headerLength())) { //check if the buffer is smaller than expected, so you are at the end of the file
-            sending = false;
-            System.out.println("Whole file send!");
-            sendFIN = false;
-        }
-        try {
-            getSender().send(sendingHeader, data);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
-        }
-    }
-
-    private void sendFIN(DatagramPacket receivedPacket) {
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-        long seqNr = receivedHeader.getAckNr();
-        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
-        ExtraHeader sendingHeader = new ExtraHeader(false, false, true, false, ackNr, seqNr);
-        try {
-            getSender().send(sendingHeader, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
-        }
-    }
-
-    private void respondToDownLoadRequest() {
-        //TODO
-    }
-
-    private void respondToUploadRequest(DatagramPacket receivedPacket) {
-        receiving = true;
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-        byte[] data = getDataOfPacket(receivedPacket.getData(), receivedHeader.getLengthData());
-        System.out.println("Received txt: " + new String(data));
-        String[] fileInfo = (new String(data).split(" "));
-        String filename = fileInfo[1];
-//        String fileName = filename.split(".")[0];
-        System.out.println("Filename_" + filename + "_");
-
-        int size = Integer.parseInt(fileInfo[0]);
-        receivingFile = new TransferFile(filename, size);
-        System.out.println("Requested for " + size + ", buffer made of length: " + receivingFile.getBufferSize());
-        sendACK(receivedPacket);
-    }
-
-    byte[] getDataOfPacket(byte[] dataAndHeader, int dataLength) {
-        return Arrays.copyOfRange(dataAndHeader, ExtraHeader.headerLength(), dataAndHeader.length);//ExtraHeader.headerLength() + dataLength);
-    }
-
-    private void respondToSYN(DatagramPacket packetInQueue) {
-        System.out.println("SYN");
-        sendSYNACK(packetInQueue);
-    }
-
+    /**
+     * Respond to a SYN ACK packet.
+     * Terminal input is read to determine if a upload or download will take place. If upload is chosen, a upload
+     * request is send to the Pi. If download is chosen, a request for all available files on the Pi is send and a list
+     * of all available files is displayed to choose from.
+     * @param packetInQueue the <code>DatagramPacket</code> to which the response is send
+     */
     private void respondToSYNACK(DatagramPacket packetInQueue) {
         System.out.println("SYN ACK");
         String response = "";
@@ -214,66 +156,6 @@ public class Client extends Thread {
             }
             respondToSYNACK(packetInQueue);
         }
-//        sendACK(packetInQueue);
-        //TODO: response to SYN ACK
-    }
-
-    private void sendDownloadRequest(DatagramPacket packetInQueue) {
-        //TODO
-    }
-
-    private void sendUploadRequest(DatagramPacket receivedPacket) {
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
-        long seqNr = receivedHeader.getAckNr();
-        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
-        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
-        sendingHeader.setUploadRequest();
-        String filename = "";
-        byte[] data;
-        while (filename.equals("")) {
-            filename = readString("Which file do you want to upload?");
-            try {
-                sendingFile = new TransferFile(filename);
-                String sendData = sendingFile.getBufferSize() + " " + filename;
-                data = sendData.getBytes();
-                String[] data2 = (new String(data)).split(" ");
-                int size = Integer.parseInt(data2[0]);
-                System.out.println("Request to upload:" + data2[1] + "_" + size);
-                sendingHeader.setLength(data.length);
-                getSender().send(sendingHeader, data);
-                sending = true;
-            } catch (IOException e) {
-                System.out.println("Could not find the file. The file must be in the Files/ folder.");
-                filename = "";
-            }
-        }
-//        sendingHeader.setLength(data.length);
-//        System.out.println("Data length: " + data.length);
-//        try {
-//            getSender().send(sendingHeader, data);
-//            sending = true;
-//        } catch (IOException e) {
-//            e.printStackTrace(); //TODO
-//        }
-    }
-
-    private String readString(String prompt) {
-        System.out.print(prompt);
-        String msg = null;
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-            msg = in.readLine();
-        } catch (IOException e) {
-            System.out.println("IOException at readString in client.");
-        }
-        return (msg == null) ? "" : msg;
-    }
-
-    private void respondToACK(DatagramPacket packetInQueue) {
-        System.out.println("ACK");
-        sendACK(packetInQueue);
-        //TODO: response to ACK
     }
 
     private void respondToFIN(DatagramPacket packetInQueue) {
@@ -281,54 +163,95 @@ public class Client extends Thread {
         sendFINACK(packetInQueue);
     }
 
-    private void sendFINACK(DatagramPacket receivedPacket) {
+    /**
+     * The <code>DatagramSocket</code> of the <code>Client</code> will be closed.
+     */
+    private void respondToFINACK() {
+        shutdown();
+    }
+
+    private void respondToDownLoadRequest(DatagramPacket receivedPacket) {
+        byte[] data = getDataOfPacket(receivedPacket.getData());
+        String filename = new String(data);
+        System.out.println("Request for a download of " + filename);
+        sendUploadRequest(receivedPacket, filename);
+    }
+
+    /**
+     * Sends an uploadrequest to the connected IPAddress and port.
+     * The data of the packet (a filename and -size) is used to create a <code>TransferFile</code> with the appropriate
+     * name and size to which data will be appended. And ACK is send as a confirmation of the retrieved uploadrequest.
+     * @param receivedPacket The <code>DatagramPacket</code> to which the uploadrequest is a response.
+     */
+    private void respondToUploadRequest(DatagramPacket receivedPacket) {
+        receiving = true;
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        byte[] data = getDataOfPacket(receivedPacket.getData());
+        System.out.println("Received txt: " + new String(data));
+        String[] fileInfo = (new String(data).split(" "));
+        String filename = fileInfo[1];
+        System.out.println("Filename_" + filename + "_");
+        int size = Integer.parseInt(fileInfo[0]);
+        receivingFile = new TransferFile(filename, size);
+        System.out.println("Requested for " + size + ", buffer made of length: " + receivingFile.getBufferSize());
+        sendACK(receivedPacket);
+    }
+
+    /**
+     * Adds the retrieved data to the buffer of the <code>TransferFile</code>.
+     * Data is read from the <code>DatagramPacket</code> and added to the buffer of the <code>TransferFile</code>. If
+     * the final data is added, the file is saved and this client is ready to perform new down-/uploads.
+     * @param receivedPacket The <code>DatagramPacket</code> from which the data will be retreived
+     */
+    private void receiveData(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        byte[] data = getDataOfPacket(receivedPacket.getData());
+        System.out.println("Add data at location: " + receivingFile.getLocation() + "(" + data.length + ")/" + receivingFile.getBufferSize());
+        try {
+            receivingFile.appendToBuffer(data, receivedHeader.getLengthData());
+        } catch (TransferFile.EndOfFileException e) {
+            receivingFile.saveReceivedFile();
+            receiving = false;
+        }
+        sendACK(receivedPacket);
+    }
+
+    /**
+     * Sends the next part of the file to the receiver.
+     * Sends the next datapart of the to transfer file to the receiver. If the file has reach its end, a FIN is send.
+     * @param receivedPacket the <code>DatagramPacket</code> to which the response is
+     */
+    private void sendData(DatagramPacket receivedPacket) {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
         nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
-        ExtraHeader sendingHeader = new ExtraHeader(false, true, true, false, ackNr, seqNr);
-        try {
-            getSender().send(sendingHeader, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
+        byte[] data = sendingFile.readFromBuffer(10240 - ExtraHeader.headerLength());
+        System.out.println("Send " + sendingFile.getLocation() + "/" + sendingFile.getBufferSize());
+        if (data.length < (10240 - ExtraHeader.headerLength())) { //check if the buffer is smaller than expected, so you are at the end of the file
+            sending = false;
+            System.out.println("Whole file send!");
+            sendFIN = false;
         }
-        shutdown();
+        getSender().send(sendingHeader, data);
     }
 
-    private void shutdown() {
-        try {
-            Thread.sleep(2000);//TODO: chose other time-out time
-        } catch (InterruptedException e) {
-        }
-        System.out.println("Shutting down");
-        receiver.getReceivingSocket().close();
-        System.exit(0);
-    }
-
-    private void respondToFINACK(DatagramPacket packetInQueue) {
-        System.out.println("FIN ACK");
-        shutdown();
-    }
-
-//    public void init() {
-//        while(!isConnected) {
-//            sendDNSRequest();
-//        }
-
-//        sendSYN();
-//        while (true) {//TODO: stop running
-//            byte buffer[] = new byte[1024];
-//            DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
-//            try {
-//                socket.receive(receivedPacket);
-//            } catch (IOException e) {
-//                e.printStackTrace();//TODO: handle exception at socket.receive
-//            }
-//            if (receivedPacket.getData().length > 9) {
-//                //Do something: e.g. handleIncommingPacket(receivedPacket)
-//            }
-//        }
+//    private void respondToACK(DatagramPacket packetInQueue) {
+//        System.out.println("ACK");
+//        sendACK(packetInQueue);
+//        //TODO: response to ACK
 //    }
+
+    /**
+     * Sends a DNSRequest.
+     */
+    void sendDNSRequest() {
+        ExtraHeader header = new ExtraHeader();
+        header.setDNSRequest();
+        header.setNoRequest();
+        sender.send(header, new byte[0], broadcastIP, broadcastPort);
+    }
 
     /**
      * Sends a SYN packet.
@@ -338,11 +261,7 @@ public class Client extends Thread {
         int seqNr = (new Random()).nextInt(2^32);
         ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
         nextAckExpected = seqNr + 1;
-        try {
-            sender.send(header, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace();//TODO
-        }
+        sender.send(header, new byte[0]);
     }
 
     /**
@@ -357,13 +276,9 @@ public class Client extends Thread {
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
         nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader header = new ExtraHeader(true, true, false, false, ackNr, seqNr);
-        try {
-            System.out.println("Acknr: " + ackNr + ", secnr: " + seqNr);
-            System.out.println(receiver.getReceivingSocket().getInetAddress() + ", port: " + receiver.getReceivingSocket().getPort());
-            getSender().send(header, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
-        }
+        System.out.println("Acknr: " + ackNr + ", secnr: " + seqNr);
+        System.out.println(receiver.getReceivingSocket().getInetAddress() + ", port: " + receiver.getReceivingSocket().getPort());
+        getSender().send(header, new byte[0]);
     }
 
     /**
@@ -378,28 +293,127 @@ public class Client extends Thread {
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
         nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
-        try {
-            getSender().send(sendingHeader, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
-        }
+        getSender().send(sendingHeader, new byte[0]);
+    }
+
+    private void sendDownloadRequest(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
+        sendingHeader.setDownloadRequest();
+        String filename = "TryFile.jpg";
+        byte[] data = filename.getBytes();
+//        boolean validFilename = false;
+//        while (!validFilename)
+//        try {
+            receivingFile = new TransferFile(filename);
+            System.out.println("Request to download: " + filename);
+            sender.send(sendingHeader, data);
+            receiving = true;
+//            validFilename = true;
+//        } catch (IOException e) {
+////            e.printStackTrace();//TODO
+//            filename = readString("Chose another filename");
+//        }
     }
 
     /**
-     * Sends a DNSRequest.
+     * Sends a upload request to the source of the received packet.
+     * Sends a upload request to the source of the received packet with as data the filesize and -name. If you want to
+     * send an file that is not in your folder, a new file has to be chosen until a valid file is chosen.
+     * @param receivedPacket the <code>DatagramPacket</code> to which the uploadrequest is a reply
      */
-    void sendDNSRequest() {
-        ExtraHeader header = new ExtraHeader();
-        header.setDNSRequest();
-        header.setNoRequest();
-//        byte[] headerBytes = header.getHeader();
-//        DatagramPacket packet = new DatagramPacket(headerBytes, headerBytes.length, destinationIP, destinationPort);
-        try {
-            sender.send(header, new byte[0], broadcastIP, broadcastPort);
-//            sender.send(header, new byte[0]);
-        } catch (IOException e) {
-            e.printStackTrace();//TODO
+    private void sendUploadRequest(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
+        sendingHeader.setUploadRequest();
+        String filename = "";
+        byte[] data;
+        while (filename.equals("")) {
+            filename = readString("Which file do you want to upload?");
+            try {
+                sendingFile = new TransferFile(filename);
+                sendingFile.createPath();
+                String sendData = sendingFile.getBufferSize() + " " + filename;
+                data = sendData.getBytes();
+                String[] data2 = (new String(data)).split(" ");
+                int size = Integer.parseInt(data2[0]);
+                System.out.println("Request to upload:" + data2[1] + " of size " + size);
+                sendingHeader.setLength(data.length);
+                getSender().send(sendingHeader, data);
+                sending = true;
+            } catch (IOException e) {
+                System.out.println("Could not find the file. The file must be in the Files/ folder.");
+                filename = "";
+            }
         }
+    }
+
+    private void sendUploadRequest(DatagramPacket receivedPacket, String filename) {
+//        filename = "/home/pi/Files/TryFile2.jpg";
+//        filename = "Files/TryFile.jpg";
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
+        sendingHeader.setUploadRequest();
+        byte[] data;
+        boolean validFilename = false;
+        while (!validFilename) {
+//        while (filename.equals("")) {
+//            filename = readString("Which file do you want to upload?");
+            try {
+                sendingFile = new TransferFile(filename);
+                sendingFile.createPath();
+                String sendData = sendingFile.getBufferSize() + " " + filename;
+                data = sendData.getBytes();
+                String[] data2 = (new String(data)).split(" ");
+                int size = Integer.parseInt(data2[0]);
+                System.out.println("Request to upload:" + data2[1] + "_" + size);
+                sendingHeader.setLength(data.length);
+                getSender().send(sendingHeader, data);
+                sending = true;
+                validFilename = true;
+            } catch (IOException e) {
+                System.out.println("Could not find the file. The file must be in the Files/ folder.");
+                filename = readString("Try another filename");
+            }
+        }
+//        }
+    }
+
+    /**
+     * Sends a FIN packet
+     * @param receivedPacket the <code>DatagramPacket</code> to which the FIN is a reply
+     */
+    private void sendFIN(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, false, true, false, ackNr, seqNr);
+        getSender().send(sendingHeader, new byte[0]);
+    }
+
+    /**
+     * Sends a FIN ACK.
+     * Sends a FIN ACK and afterwards closes the sending and receiving socket after 2 seconds.
+     * @param receivedPacket the <code>DatagramPacket</code> to which the FIN ACK is a reply
+     */
+    private void sendFINACK(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long seqNr = receivedHeader.getAckNr();
+        long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
+        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+        ExtraHeader sendingHeader = new ExtraHeader(false, true, true, false, ackNr, seqNr);
+        getSender().send(sendingHeader, new byte[0]);
+        shutdown();
     }
 
     /**
@@ -408,6 +422,18 @@ public class Client extends Thread {
      */
     void packetArrived(boolean arrived) {
         this.packetArrived = arrived;
+    }
+
+    /**
+     * Returns the data of the complete packet (header and data).
+     * @param dataAndHeader a byte-array of the header and data
+     * @return the data of the complete packet
+     */
+    byte[] getDataOfPacket(byte[] dataAndHeader) {
+        ExtraHeader header = ExtraHeader.returnHeader(dataAndHeader);
+        int from = ExtraHeader.headerLength();
+        int to = from + header.getLengthData();
+        return Arrays.copyOfRange(dataAndHeader, from, to);//dataAndHeader.length);
     }
 
     /**
@@ -428,5 +454,35 @@ public class Client extends Thread {
 
     public boolean getFINreceived() {
         return this.FINreceived;
+    }
+
+    /**
+     * Reads terminal input.
+     * @param prompt the shown message to which the terminal input is a response
+     * @return terminal input
+     */
+    private String readString(String prompt) {
+        System.out.print(prompt);
+        String msg = null;
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            msg = in.readLine();
+        } catch (IOException e) {
+            System.out.println("IOException at readString in client.");
+        }
+        return (msg == null) ? "" : msg;
+    }
+
+    /**
+     * Closes the socket after 2 seconds.
+     */
+    private void shutdown() {
+        try {
+            Thread.sleep(2000);//TODO: chose other time-out time
+        } catch (InterruptedException e) {
+        }
+        System.out.println("Shutting down");
+        receiver.getReceivingSocket().close();
+        System.exit(0);
     }
 }

@@ -19,24 +19,28 @@ public class TransferFile {
     private int location;
 
     TransferFile(String filename, int length) {
-        this.filename = filename;
+        this.filename = "Files/" + filename;
         this.buffer = new byte[length];
         this.location = 0;
     }
 
-    TransferFile(String filename) throws IOException {
+    TransferFile(String filename) {//throws IOException {
         this.filename = "Files/" + filename;
-        createPath();
+//        createPath();
         this.location = 0;
     }
 
-    private void createPath() throws IOException {
+    void createPath() throws IOException {
         Path path = Paths.get(this.filename);
         buffer = Files.readAllBytes(path);
     }
 
     int getBufferSize() {
         return this.buffer.length;
+    }
+
+    void setBufferSize(int size) {
+        this.buffer = new byte[size];
     }
 
     String getFilename() {
