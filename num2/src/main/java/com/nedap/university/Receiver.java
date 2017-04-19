@@ -19,6 +19,9 @@ public class Receiver extends Thread {
 //    private InetAddress destAddress;
     private boolean isConnected = true;
     private Queue<DatagramPacket> queue;
+    private Queue<Long> receivedFrames;
+    private long lastFrameReceived;
+    private final int RECEIVINGWINDOW = 1;
 
     /**
      * Creates a <code>Receiver</code> connected to a specified <code>DatagramSocket</code> and <code>Client</code>.
@@ -29,6 +32,7 @@ public class Receiver extends Thread {
         this.receivingSocket = receivingSocket;
         this.client = client;
         this.queue = new ConcurrentLinkedQueue<>();
+        this.receivedFrames = new ConcurrentLinkedQueue<>();
     }
 
     /**
@@ -39,10 +43,48 @@ public class Receiver extends Thread {
     public void run() {
         while (isConnected) { //TODO: set this boolean to false when no longer connected
             DatagramPacket receivedPacket = receivePackets();
-            queue.add(receivedPacket);
-            setClientPacketArrived();
+            if (isInReceivingWindow(receivedPacket)) {
+                queue.add(receivedPacket);
+                ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+                if (!receivedHeader.isDNS() && !receivedHeader.isSyn()) {
+                    receivedFrames.add(receivedHeader.getSeqNr());
+                    updateLastFrameReceived();
+                }
+//                updateLastFrameReceived();
+                setClientPacketArrived();
+            }
+
+//            queue.add(receivedPacket);
+//            setClientPacketArrived();
         }
         System.out.println("No longer connected.");
+    }
+
+    private void updateLastFrameReceived() {
+        boolean updated;
+        do {
+            updated = false;
+            for (Long seqNr : receivedFrames) {
+                if (seqNr == lastFrameReceived + 1) {
+                    lastFrameReceived++;
+                    receivedFrames.remove(seqNr);
+                    updated = true;
+                }
+            }
+        } while(!updated);
+    }
+
+    private boolean isInReceivingWindow(DatagramPacket receivedPacket) {
+        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+        long receivedSeqNr = receivedHeader.getSeqNr();
+        if (receivedHeader.isSyn()) {
+            this.lastFrameReceived = receivedSeqNr;
+            return true;
+        } else if (receivedHeader.isDNS()) {
+            return true;
+        } else {
+            return (receivedSeqNr > this.lastFrameReceived && receivedSeqNr <= this.lastFrameReceived + RECEIVINGWINDOW);
+        }
     }
 
     /**

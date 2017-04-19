@@ -23,7 +23,7 @@ public class Pi extends Thread{
      */
     Pi(int port) throws SocketException, UnknownHostException {
         broadcastSocket = new DatagramSocket(port);
-        ownIP = InetAddress.getByName("192.168.40.6");
+        ownIP = InetAddress.getByName("192.168.40.16");
         System.out.println("Local IP: " + ownIP);
     }
 

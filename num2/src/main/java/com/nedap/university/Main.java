@@ -40,7 +40,7 @@ public class Main {
         //TODO: get this IPaddress by mDNS
         try {
             broadcastIP = InetAddress.getByName("192.168.40.255");
-            PiIP = InetAddress.getByName("192.168.40.6");
+            PiIP = InetAddress.getByName("192.168.40.16");
 //            PiIP = InetAddress.getByName("192.168.40.16");
         } catch (UnknownHostException e) {
             e.printStackTrace();

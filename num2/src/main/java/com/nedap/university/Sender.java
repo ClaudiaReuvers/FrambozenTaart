@@ -107,7 +107,7 @@ class Sender implements TimeOutEventHandler {
 
     void acknowledgePacket(long ackNr) {
         if (unAcknowledgedPackets.remove(ackNr) != null) {
-            System.out.println("Timeout for " + ackNr + " removed.");
+            System.out.println("Timeout for ACK " + ackNr + " removed.");
         }
         unAcknowledgedPackets.remove(ackNr);
     }

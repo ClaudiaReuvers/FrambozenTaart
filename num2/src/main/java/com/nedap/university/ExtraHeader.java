@@ -343,8 +343,9 @@ public class ExtraHeader {
             headerString += "SYN[" + getSeqNr() + "] ";
         }
         if (isAck()) {
-            headerString += "ACK[" + getAckNr() + "] ";
+            headerString += "ACK";
         }
+        headerString += "[" + getAckNr() + "] ";
         if (isFin()) {
             headerString += "FIN ";
         }
@@ -358,7 +359,9 @@ public class ExtraHeader {
         } else if (isGetList()) {
             headerString += "GETLIST";
         }
-        headerString += "\n Datalength: " + getLengthData();
+        if (getLengthData() > 0) {
+            headerString += "\n Datalength: " + getLengthData();
+        }
         return headerString;
     }
 
