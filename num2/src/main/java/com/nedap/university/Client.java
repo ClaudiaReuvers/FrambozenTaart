@@ -1,5 +1,7 @@
 package com.nedap.university;
 
+import com.nedap.university.Utils.Utils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7,8 +9,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.util.Arrays;
 import java.util.Random;
+
+import static com.nedap.university.Utils.Utils.getDataOfPacket;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
@@ -24,7 +27,6 @@ public class Client extends Thread {
     private BufferedReader in;
     private boolean isConnected = true;
     private volatile boolean packetArrived; //s.t. a change in this parameter results in a reading of the packet
-    private long nextAckExpected;
     private boolean sending = false;
     private boolean sendFIN;
     private boolean receiving = false;
@@ -87,32 +89,62 @@ public class Client extends Thread {
         if (receivedHeader.isDNSResponse()) {
             respondToDNSResponse(packetInQueue);
         } else if (receivedHeader.isSyn() & !receivedHeader.isAck() & !receivedHeader.isFin()) { //SYN
-            sender.setDestAddress(packetInQueue.getAddress());
-            sender.setDestPort(packetInQueue.getPort());
-            sendSYNACK(packetInQueue);
-        } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {  //SYN ACK
-            respondToSYNACK(packetInQueue);
-        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { //    ACK
-            if (receivedHeader.isUploadRequest()) {
-                respondToUploadRequest(packetInQueue);
-            } else if (receivedHeader.isDownloadRequest()) {
-                respondToDownLoadRequest(packetInQueue);
-            } else if (sending) {
-                sendData(packetInQueue);
-            } else if (receiving) {
-                receiveData(packetInQueue);
-            } else if (!sendFIN) {
-                sendFIN(packetInQueue);
+            if (inReceivingWindow(receivedHeader.getAckNr())) { //check if the ackNr is as expected
+                acknowledgePacket(receivedHeader.getAckNr());
+                getSender().setDestAddress(packetInQueue.getAddress());
+                getSender().setDestPort(packetInQueue.getPort());
+                sendSYNACK(packetInQueue);
+            } else {
+                System.out.println("Unexpected ACK nr");
             }
-//            respondToACK(packetInQueue);
+        } else if (receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) {  //SYN ACK
+            if (inReceivingWindow(receivedHeader.getAckNr())) { //check if the ackNr is as expected
+                acknowledgePacket(receivedHeader.getAckNr());
+                respondToSYNACK(packetInQueue);
+            } else {
+                System.out.println("Unexpected ACK nr");
+            }
+        } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & !receivedHeader.isFin()) { //    ACK
+            if (inReceivingWindow(receivedHeader.getAckNr())) { //check if the ackNr is as expected
+                acknowledgePacket(receivedHeader.getAckNr());
+                if (receivedHeader.isUploadRequest()) {
+                    respondToUploadRequest(packetInQueue);
+                } else if (receivedHeader.isDownloadRequest()) {
+                    respondToDownLoadRequest(packetInQueue);
+                } else if (sending) {
+                    sendData(packetInQueue);
+                } else if (receiving) {
+                    receiveData(packetInQueue);
+                } else if (!sendFIN) {
+                    sendFIN(packetInQueue);
+                }
+            } else {
+                System.out.println("Unexpected ACK nr");
+            }
         } else if (!receivedHeader.isSyn() & !receivedHeader.isAck() & receivedHeader.isFin()) { //FIN
-            respondToFIN(packetInQueue);
+            if (inReceivingWindow(receivedHeader.getAckNr())) { //check if the ackNr is as expected
+                acknowledgePacket(receivedHeader.getAckNr());
+                respondToFIN(packetInQueue);
+            }
         } else if (!receivedHeader.isSyn() & receivedHeader.isAck() & receivedHeader.isFin()) {  //FIN ACK
-            respondToFINACK();
+            if (inReceivingWindow(receivedHeader.getAckNr())) { //check if the ackNr is as expected
+                acknowledgePacket(receivedHeader.getAckNr());
+                respondToFINACK();
+            } else {
+                System.out.println("Unexpected ACK nr");
+            }
         } else {
             System.out.println("Unknown flags, no response is send.");
         }
     }
+
+    private boolean inReceivingWindow(long ackNr) {
+        return  ackNr == getSender().getNextAckExpected();
+    }
+
+//    void setNextAckExpected(int filesize) {
+//        nextAckExpected += filesize + 1;
+//    }
 
     /**
      * Respond to a DNSresponse of the server.
@@ -120,14 +152,14 @@ public class Client extends Thread {
      * @param packetInQueue <code>DatagramPacket</code> to which the DNSresponse is a reply
      */
     private void respondToDNSResponse(DatagramPacket packetInQueue) {
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
-        int dataLength = receivedHeader.getLengthData();
-        System.out.println("DataLength: " + dataLength);
+//        ExtraHeader receivedHeader = ExtraHeader.returnHeader(packetInQueue.getData());
+//        int dataLength = receivedHeader.getLengthData();
+//        System.out.println("DataLength: " + dataLength);
         byte[] data = getDataOfPacket(packetInQueue.getData());
         System.out.println("Data: " + new String(data));
         int port = Integer.parseInt(new String(data).split(" ")[0]);
-        sender.setDestAddress(packetInQueue.getAddress());
-        sender.setDestPort(port);
+        getSender().setDestAddress(packetInQueue.getAddress());
+        getSender().setDestPort(port);
         sendSYN();
     }
 
@@ -185,7 +217,7 @@ public class Client extends Thread {
      */
     private void respondToUploadRequest(DatagramPacket receivedPacket) {
         receiving = true;
-        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
+//        ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         byte[] data = getDataOfPacket(receivedPacket.getData());
         System.out.println("Received txt: " + new String(data));
         String[] fileInfo = (new String(data).split(" "));
@@ -225,9 +257,9 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
         byte[] data = sendingFile.readFromBuffer(10240 - ExtraHeader.headerLength());
+//        setNextAckExpected(data.length);
         System.out.println("Send " + sendingFile.getLocation() + "/" + sendingFile.getBufferSize());
         if (data.length < (10240 - ExtraHeader.headerLength())) { //check if the buffer is smaller than expected, so you are at the end of the file
             sending = false;
@@ -250,18 +282,20 @@ public class Client extends Thread {
         ExtraHeader header = new ExtraHeader();
         header.setDNSRequest();
         header.setNoRequest();
-        sender.send(header, new byte[0], broadcastIP, broadcastPort);
+        getSender().send(header, new byte[0], broadcastIP, broadcastPort);
     }
 
     /**
      * Sends a SYN packet.
      * The sequence number of this packet is set to a random number between 0 and 2^32 - 1.
      */
-    private void sendSYN() { //TODO: look if still valid
+    private void sendSYN() {
         int seqNr = (new Random()).nextInt(2^32);
+        ExtraHeader sendingHeader = new ExtraHeader();
+        sendingHeader.setFlags(true, false, false, false);
         ExtraHeader header = new ExtraHeader(true, false, false, false, 0, seqNr);
-        nextAckExpected = seqNr + 1;
-        sender.send(header, new byte[0]);
+//        setNextAckExpected(0);
+        getSender().send(header, new byte[0]);
     }
 
     /**
@@ -274,7 +308,7 @@ public class Client extends Thread {
         int seqNr = (new Random()).nextInt(2^32);
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+//        setNextAckExpected(0);
         ExtraHeader header = new ExtraHeader(true, true, false, false, ackNr, seqNr);
         System.out.println("Acknr: " + ackNr + ", secnr: " + seqNr);
         System.out.println(receiver.getReceivingSocket().getInetAddress() + ", port: " + receiver.getReceivingSocket().getPort());
@@ -291,7 +325,7 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+//        setNextAckExpected(0);
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
         getSender().send(sendingHeader, new byte[0]);
     }
@@ -300,17 +334,17 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
         sendingHeader.setDownloadRequest();
         String filename = "TryFile.jpg";
         byte[] data = filename.getBytes();
+//        setNextAckExpected(data.length);
 //        boolean validFilename = false;
 //        while (!validFilename)
 //        try {
             receivingFile = new TransferFile(filename);
             System.out.println("Request to download: " + filename);
-            sender.send(sendingHeader, data);
+            getSender().send(sendingHeader, data);
             receiving = true;
 //            validFilename = true;
 //        } catch (IOException e) {
@@ -329,7 +363,6 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
         sendingHeader.setUploadRequest();
         String filename = "";
@@ -341,10 +374,11 @@ public class Client extends Thread {
                 sendingFile.createPath();
                 String sendData = sendingFile.getBufferSize() + " " + filename;
                 data = sendData.getBytes();
-                String[] data2 = (new String(data)).split(" ");
-                int size = Integer.parseInt(data2[0]);
-                System.out.println("Request to upload:" + data2[1] + " of size " + size);
-                sendingHeader.setLength(data.length);
+//                setNextAckExpected(data.length);
+//                String[] data2 = (new String(data)).split(" ");
+//                int size = Integer.parseInt(data2[0]);
+//                System.out.println("Request to upload:" + data2[1] + " of size " + size);
+//                sendingHeader.setLength(data.length);
                 getSender().send(sendingHeader, data);
                 sending = true;
             } catch (IOException e) {
@@ -360,7 +394,6 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
         ExtraHeader sendingHeader = new ExtraHeader(false, true, false, false, ackNr, seqNr);
         sendingHeader.setUploadRequest();
         byte[] data;
@@ -373,10 +406,11 @@ public class Client extends Thread {
                 sendingFile.createPath();
                 String sendData = sendingFile.getBufferSize() + " " + filename;
                 data = sendData.getBytes();
-                String[] data2 = (new String(data)).split(" ");
-                int size = Integer.parseInt(data2[0]);
-                System.out.println("Request to upload:" + data2[1] + "_" + size);
-                sendingHeader.setLength(data.length);
+//                String[] data2 = (new String(data)).split(" ");
+//                int size = Integer.parseInt(data2[0]);
+//                System.out.println("Request to upload:" + data2[1] + "_" + size);
+//                sendingHeader.setLength(data.length);
+//                setNextAckExpected(data.length);
                 getSender().send(sendingHeader, data);
                 sending = true;
                 validFilename = true;
@@ -396,7 +430,7 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+//        setNextAckExpected(0);
         ExtraHeader sendingHeader = new ExtraHeader(false, false, true, false, ackNr, seqNr);
         getSender().send(sendingHeader, new byte[0]);
     }
@@ -410,7 +444,7 @@ public class Client extends Thread {
         ExtraHeader receivedHeader = ExtraHeader.returnHeader(receivedPacket.getData());
         long seqNr = receivedHeader.getAckNr();
         long ackNr = receivedHeader.getSeqNr() + receivedHeader.getLengthData() + 1;
-        nextAckExpected = seqNr + receivedHeader.getLengthData() + 1;
+//        setNextAckExpected(0);
         ExtraHeader sendingHeader = new ExtraHeader(false, true, true, false, ackNr, seqNr);
         getSender().send(sendingHeader, new byte[0]);
         shutdown();
@@ -422,18 +456,6 @@ public class Client extends Thread {
      */
     void packetArrived(boolean arrived) {
         this.packetArrived = arrived;
-    }
-
-    /**
-     * Returns the data of the complete packet (header and data).
-     * @param dataAndHeader a byte-array of the header and data
-     * @return the data of the complete packet
-     */
-    byte[] getDataOfPacket(byte[] dataAndHeader) {
-        ExtraHeader header = ExtraHeader.returnHeader(dataAndHeader);
-        int from = ExtraHeader.headerLength();
-        int to = from + header.getLengthData();
-        return Arrays.copyOfRange(dataAndHeader, from, to);//dataAndHeader.length);
     }
 
     /**
@@ -452,7 +474,7 @@ public class Client extends Thread {
         return this.receiver;
     }
 
-    public boolean getFINreceived() {
+    boolean getFINreceived() {
         return this.FINreceived;
     }
 
@@ -484,5 +506,10 @@ public class Client extends Thread {
         System.out.println("Shutting down");
         receiver.getReceivingSocket().close();
         System.exit(0);
+    }
+
+    void acknowledgePacket(long ackNr) {
+        Utils.Timeout.stopTimeOut(ackNr);
+        getSender().acknowledgePacket(ackNr);
     }
 }

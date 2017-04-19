@@ -1,30 +1,30 @@
 package com.nedap.university;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
+import com.nedap.university.Utils.Utils;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.nedap.university.Utils.Utils.joinByteArrays;
 
 /**
  * Created by claudia.reuvers on 14/04/2017.
  *
  * @author claudia.reuvers
  */
-class Sender {
+class Sender implements TimeOutEventHandler {
 
 //    private int sourcePort;
     private int destPort;
     private DatagramSocket socket;
     private InetAddress destAddress;
 //    private boolean isConnected;
+    static final int TIMEOUT = 2000;
+    private ConcurrentHashMap<Long, DatagramPacket> unAcknowledgedPackets = new ConcurrentHashMap<>();
+    private long nextAckExpected;
 
     /**
      * Creates a Sender with a socket connected.
@@ -43,14 +43,21 @@ class Sender {
      */
     void send(ExtraHeader header, byte[] data){
         header.setLength(data.length);
+        nextAckExpected = header.getSeqNr() + data.length + 1;
         byte[] sendData = joinByteArrays(header.getHeader(), data);
         System.out.println("Send: " + header);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
+        addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
         try {
             socket.send(packet);
+            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
+    }
+
+    private void addUnackedPacket(long ackNr, DatagramPacket packet) {
+        unAcknowledgedPackets.put(ackNr, packet);
     }
 
     /**
@@ -81,29 +88,27 @@ class Sender {
         }
     }
 
-    byte[] joinByteArrays(byte[] array1, byte[] array2) {
-//        byte[] data = new byte[array1.length + array2.length];
-//        for (int i = 0; i < array1.length; i++) {
-//            data[i] = array1[i];
-//        }
-//        for (int i = 0; i < array2.length; i++) {
-//            data[i + array1.length - 1] = array2[i];
-//        }
-//        return data;
-//        byte[] combinedData = new byte[array1.length + array2.length];
-//        System.arraycopy(array1,0,combinedData,0         ,array1.length);
-//        System.arraycopy(array2,0,combinedData,array1.length+1,array2.length);
-//        return combinedData;
-
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            outputStream.write(array1);
-            outputStream.write(array2);
-        } catch (IOException e){
-            System.out.println("Could not write this!");
+    @Override
+    public void TimeoutElapsed(Object tag) {
+        if (tag instanceof Long) {
+            long ackNr = (long) tag;
+            DatagramPacket packet = unAcknowledgedPackets.get(ackNr);
+            System.out.println("Resend: " + ExtraHeader.returnHeader(packet.getData()));
+            try {
+                socket.send(packet);
+                Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+            } catch (IOException e) {
+                System.out.println("Unable to resend packet: " + ExtraHeader.returnHeader(packet.getData()));
+            }
         }
-        return outputStream.toByteArray( );
+        //TODO
+    }
 
+    void acknowledgePacket(long ackNr) {
+        unAcknowledgedPackets.remove(ackNr);
+    }
+
+    public long getNextAckExpected() {
+        return nextAckExpected;
     }
 }

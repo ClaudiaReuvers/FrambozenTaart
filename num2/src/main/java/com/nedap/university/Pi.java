@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.*;
 
+import static com.nedap.university.Utils.Utils.joinByteArrays;
+
 /**
  * Created by claudia.reuvers on 14/04/2017.
  *
@@ -82,54 +84,5 @@ public class Pi extends Thread{
         } catch (IOException e) {
             e.printStackTrace(); //TODO
         }
-
-
-//        DatagramSocket sock = new DatagramSocket();
-//        Sender sender = new Sender(sock);
-//        sender.setDestPort(receivedPacket.getPort());
-//        sender.setDestAddress(receivedPacket.getAddress());
-//        Receiver receiver = new Receiver(sock, sender); //TODO: start sender & receiver
-//        try {
-//            sender.send(header, new byte[0]);
-//        } catch (IOException e) {
-//            e.printStackTrace();//TODO
-//        }
-    }
-
-//    private byte[] joinByteArrays(byte[] array1, byte[] array2) {
-//        byte[] data = new byte[array1.length + array2.length];
-//        for (int i = 0; i < array1.length; i++) {
-//            data[i] = array1[i];
-//        }
-//        for (int i = 0; i < array2.length; i++) {
-//            data[i + array1.length - 1] = array2[i];
-//        }
-//        return data;
-//    }
-
-    byte[] joinByteArrays(byte[] array1, byte[] array2) {
-//        byte[] data = new byte[array1.length + array2.length];
-//        for (int i = 0; i < array1.length; i++) {
-//            data[i] = array1[i];
-//        }
-//        for (int i = 0; i < array2.length; i++) {
-//            data[i + array1.length - 1] = array2[i];
-//        }
-//        return data;
-//        byte[] combinedData = new byte[array1.length + array2.length];
-//        System.arraycopy(array1,0,combinedData,0         ,array1.length);
-//        System.arraycopy(array2,0,combinedData,array1.length+1,array2.length);
-//        return combinedData;
-
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            outputStream.write(array1);
-            outputStream.write(array2);
-        } catch (IOException e){
-            System.out.println("Could not write this!");
-        }
-        return outputStream.toByteArray( );
-
     }
 }
