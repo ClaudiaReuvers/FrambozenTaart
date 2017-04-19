@@ -2,7 +2,7 @@
 
 ## Installation
 Connect your raspberryPi to a power source to make sure it doesn't shut down. Set your networksettings such that you
-are connected to the NedapUniversity network. Connect to the Raspberry Pi by typing 'ssh pi@<Pi_IPaddress>', next typ
+are connected to the NedapUniversity network. Connect to the Raspberry Pi by typing `ssh pi@<Pi_IPaddress>`, next typ
 in the super secret password.
 
 Download the num2 directory from the repository 'FrambozenTaart'. In this folder a build.gradle file is present. If you
