@@ -43,7 +43,7 @@ public class Utils {
      * @version 09-02-2016
      */
     public static class Timeout implements Runnable {
-        private static Map<Date, Map<TimeOutEventHandler, List<DatagramPacket>>> eventHandlers = new HashMap<>();
+        private static Map<Date, Map<TimeOutEventHandler, List<Long>>> eventHandlers = new HashMap<>();
         private static Map<Object, Date> packets = new HashMap<>();
         private static Thread eventTriggerThread;
         private static boolean started = false;
@@ -78,7 +78,6 @@ public class Utils {
             if (tag != null) {
                 eventHandlers.remove(packets.get(tag));
                 packets.remove(tag);
-                System.out.println("Remove timeout");
             }
         }
 
@@ -91,7 +90,7 @@ public class Utils {
          *            the event handler that is called once the timeout elapses
          */
         public static void SetTimeout(long millisecondsTimeout,
-                                      TimeOutEventHandler handler, DatagramPacket tag) {
+                                      TimeOutEventHandler handler, long tag) {
             Date elapsedMoment = new Date();
             elapsedMoment
                     .setTime(elapsedMoment.getTime() + millisecondsTimeout);
@@ -120,7 +119,7 @@ public class Utils {
         public void run() {
             boolean runThread = true;
             ArrayList<Date> datesToRemove = new ArrayList<>();
-            HashMap<TimeOutEventHandler, List<DatagramPacket>> handlersToInvoke = new HashMap<>();
+            HashMap<TimeOutEventHandler, List<Long>> handlersToInvoke = new HashMap<>();
             Date now;
 
             while (runThread) {
@@ -138,7 +137,7 @@ public class Utils {
                                     handlersToInvoke.put(handler,
                                             new ArrayList<>());
                                 }
-                                for (DatagramPacket tag : eventHandlers.get(date).get(
+                                for (long tag : eventHandlers.get(date).get(
                                         handler)) {
                                     handlersToInvoke.get(handler).add(tag);
                                 }

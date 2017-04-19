@@ -49,8 +49,8 @@ class Sender implements TimeOutEventHandler {
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
         try {
             socket.send(packet);
-            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
-            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+            addUnackedPacket(header.getSeqNr() + 1, packet);
+            Utils.Timeout.SetTimeout(TIMEOUT, this, header.getSeqNr() + 1);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
@@ -83,29 +83,32 @@ class Sender implements TimeOutEventHandler {
         System.out.println("Send: " + header);
         try {
             socket.send(packet);
-            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
-            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+            addUnackedPacket(header.getSeqNr() + 1, packet);
+            Utils.Timeout.SetTimeout(TIMEOUT, this, header.getSeqNr() + 1);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
     }
 
     @Override
-    public void TimeoutElapsed(DatagramPacket tag) {
-        if (tag instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) tag;
+    public void TimeoutElapsed(long tag) {
+//        if (tag instanceof long) {
+            DatagramPacket packet = unAcknowledgedPackets.get(tag);
 //            DatagramPacket packet = unAcknowledgedPackets.get(ackNr);
             System.out.println("Resend: " + ExtraHeader.returnHeader(packet.getData()));
             try {
                 socket.send(packet);
-                Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
+                Utils.Timeout.SetTimeout(TIMEOUT, this, tag);
             } catch (IOException e) {
                 System.out.println("Unable to resend packet: " + ExtraHeader.returnHeader(packet.getData()));
             }
-        }
+//        }
     }
 
     void acknowledgePacket(long ackNr) {
+        if (unAcknowledgedPackets.remove(ackNr) != null) {
+            System.out.println("Timeout for " + ackNr + " removed.");
+        }
         unAcknowledgedPackets.remove(ackNr);
     }
 

@@ -7,6 +7,6 @@ import java.net.DatagramPacket;
  */
 public interface TimeOutEventHandler {
 
-    void TimeoutElapsed(DatagramPacket tag);
+    void TimeoutElapsed(long tag);
 
 }
