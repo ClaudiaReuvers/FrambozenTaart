@@ -49,7 +49,7 @@ public class ExtraHeader {
         this.length[2] = (byte) (ackNr >> 8);
         this.length[3] = (byte) ackNr;
         setHeader();
-    } //TODO: add exception if is set when isAck()==false + add in testExtraHeader
+    }
 
     public int getLengthData() {
         int result = 0x00FF & length[0];

@@ -41,7 +41,7 @@ public class Receiver extends Thread {
      */
     @Override
     public void run() {
-        while (isConnected) { //TODO: set this boolean to false when no longer connected
+        while (isConnected) {
             DatagramPacket receivedPacket = receivePackets();
             if (isInReceivingWindow(receivedPacket)) {
                 queue.add(receivedPacket);

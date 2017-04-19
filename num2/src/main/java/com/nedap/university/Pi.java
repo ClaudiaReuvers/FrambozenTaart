@@ -34,13 +34,13 @@ public class Pi extends Thread{
      */
     @Override
     public void run() {
-        while (true) {//TODO: stop running
+        while (true) {
             byte buffer[] = new byte[1024];
             DatagramPacket receivedPacket = new DatagramPacket(buffer, buffer.length);
             try {
                 broadcastSocket.receive(receivedPacket);
             } catch (IOException e) {
-                e.printStackTrace();//TODO: handle exception at socket.receive()
+                System.out.println("Could not receive information from the broadcast socket.");
             }
             ExtraHeader receivedPacketHeader = ExtraHeader.returnHeader(receivedPacket.getData());
             System.out.println("Broadcast received: " + receivedPacketHeader);
@@ -82,7 +82,7 @@ public class Pi extends Thread{
             broadcastSocket.send(packet);
 
         } catch (IOException e) {
-            e.printStackTrace(); //TODO
+            System.out.println("Could not send a DNSresponse.");
         }
     }
 }

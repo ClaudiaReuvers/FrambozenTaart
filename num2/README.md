@@ -14,6 +14,9 @@ typ `./gradlew deploy` to put the created .jar-file on your raspberry Pi.
 To start the Pi, typ `/usr/bin/java -jar /home/pi/NUM2.jar pi`. This will start the Main-class with the argument 'pi',
 thereby creating and starting a Pi-class which listens to incomming DNSrequests on port 9876. If an connection is made,
 a new Client will be set up at another to communicate with the Client.
+At this moment a new Client is specifically started at port 15423 such that packets can be inspected using Wireshark.
+If you do not want to do this and will be able to host multiple client, remove the specific port on line 88 of the
+Pi-class.
 
 ## Starting a Client
 Start the Main-class with as argument client, this will start a Client to communicate with the Pi. After de IPaddress

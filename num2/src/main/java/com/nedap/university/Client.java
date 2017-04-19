@@ -64,7 +64,7 @@ public class Client extends Thread {
         this.receiver = new Receiver(sock, this);
         receiver.start();
         this.in = new BufferedReader(new InputStreamReader(System.in));
-    } //TODO: remove if testing with Wireshark is finished
+    }
 
     /**
      * Starts the <code>Client</code>, as long as the client is connected it gets a packet from the queue of the
@@ -184,7 +184,7 @@ public class Client extends Thread {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();//TODO
+
             }
             respondToSYNACK(packetInQueue);
         }
@@ -342,7 +342,7 @@ public class Client extends Thread {
             receiving = true;
 //            validFilename = true;
 //        } catch (IOException e) {
-////            e.printStackTrace();//TODO
+////            e.printStackTrace();
 //            filename = readString("Chose another filename");
 //        }
     }
@@ -494,7 +494,7 @@ public class Client extends Thread {
      */
     private void shutdown() {
         try {
-            Thread.sleep(2000);//TODO: chose other time-out time
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
         }
         System.out.println("Shutting down");

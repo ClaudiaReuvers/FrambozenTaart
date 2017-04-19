@@ -90,7 +90,7 @@ public class TransferFile {
         try {
             outputFile.write(buffer);
         } catch (IOException e1) {
-            e1.printStackTrace();//TODO
+            System.out.println("Could not write the retrieved data to a the file.");
         }
 
 //            BufferedImage image = ImageIO.read(new ByteArrayInputStream(buffer));
