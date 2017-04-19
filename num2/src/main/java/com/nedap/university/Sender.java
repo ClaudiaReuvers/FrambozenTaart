@@ -47,9 +47,9 @@ class Sender implements TimeOutEventHandler {
         byte[] sendData = joinByteArrays(header.getHeader(), data);
         System.out.println("Send: " + header);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, destAddress, destPort);
-        addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
         try {
             socket.send(packet);
+            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
             Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
@@ -76,23 +76,25 @@ class Sender implements TimeOutEventHandler {
         this.destAddress = destAddress;
     }
 
-    public void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) {
+    void send(ExtraHeader header, byte[] data, InetAddress broadcastIP, int broadcastPort) {
         header.setLength(data.length);
         byte[] sendData = header.getHeader();//joinByteArrays(header.getHeader(), data);
         DatagramPacket packet = new DatagramPacket(sendData, sendData.length, broadcastIP, broadcastPort);
         System.out.println("Send: " + header);
         try {
             socket.send(packet);
+            addUnackedPacket(header.getSeqNr() + data.length + 1, packet);
+            Utils.Timeout.SetTimeout(TIMEOUT, this, packet);
         } catch (IOException e) {
             System.out.println("Unable to send packet: " + header);
         }
     }
 
     @Override
-    public void TimeoutElapsed(Object tag) {
-        if (tag instanceof Long) {
-            long ackNr = (long) tag;
-            DatagramPacket packet = unAcknowledgedPackets.get(ackNr);
+    public void TimeoutElapsed(DatagramPacket tag) {
+        if (tag instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) tag;
+//            DatagramPacket packet = unAcknowledgedPackets.get(ackNr);
             System.out.println("Resend: " + ExtraHeader.returnHeader(packet.getData()));
             try {
                 socket.send(packet);
@@ -101,7 +103,6 @@ class Sender implements TimeOutEventHandler {
                 System.out.println("Unable to resend packet: " + ExtraHeader.returnHeader(packet.getData()));
             }
         }
-        //TODO
     }
 
     void acknowledgePacket(long ackNr) {
